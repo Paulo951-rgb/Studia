@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TOOLS, TOOL_LIMITS, parseToolArguments, ToolArgumentError, type ToolName } from '@/core/ai/tools';
+import { normalizeUrl } from '@/core/util/ids';
 
 test('the 19 tools required by the specification are all declared', () => {
   const expected: ToolName[] = [
@@ -86,4 +87,10 @@ test('simulate_grade requires a numeric grade within the scale', () => {
   );
   assert.equal(parsed.points, 14);
   assert.equal(parsed.coefficient, 2);
+});
+
+test('school URLs must use HTTPS because credentials are sent there', () => {
+  assert.equal(normalizeUrl('  college.example.fr/pronote/  '), 'https://college.example.fr/pronote');
+  assert.equal(normalizeUrl('https://college.example.fr/pronote'), 'https://college.example.fr/pronote');
+  assert.throws(() => normalizeUrl('http://college.example.fr/pronote'), /HTTPS requis/);
 });

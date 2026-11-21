@@ -30,7 +30,12 @@ export function accountIdFor(provider: string, schoolUrl: string, username: stri
 export function normalizeUrl(url: string): string {
   const trimmed = url.trim();
   if (!trimmed) return '';
-  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  // Credentials are sent to this URL: plain HTTP is refused rather than upgraded silently,
+  // so the user knows the address was wrong.
+  if (/^http:\/\//i.test(trimmed)) {
+    throw new Error('HTTPS requis : l’adresse de l’établissement doit commencer par https://');
+  }
+  const withScheme = /^https:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   return withScheme.replace(/\/+$/, '');
 }
 
