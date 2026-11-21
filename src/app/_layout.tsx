@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -99,19 +99,6 @@ export default function RootLayout() {
     );
   }
 
-  if (lockState === 'locked') {
-    return (
-      <Screen style={{ padding: 24, justifyContent: 'center', gap: 12 }}>
-        <AppText variant="title">Scolary est verrouillé</AppText>
-        <AppText variant="body" color="textMuted">
-          Vos notes, messages et conversations restent sur ce téléphone. Déverrouillez pour les consulter.
-        </AppText>
-        {unlockError ? <AppText variant="caption" color="danger">{unlockError}</AppText> : null}
-        <Button label="Déverrouiller" onPress={() => void unlock()} />
-      </Screen>
-    );
-  }
-
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
@@ -145,6 +132,30 @@ export default function RootLayout() {
         <Stack.Screen name="school/revision" options={{ title: 'Révisions et bilans' }} />
         <Stack.Screen name="school/search" options={{ title: 'Recherche' }} />
       </Stack>
+      {lockState === 'locked' ? (
+        // Rendered on top of the stack rather than replacing it, so unlocking returns to
+        // the same screen instead of the first route.
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            backgroundColor: palette.background,
+            padding: 24,
+            justifyContent: 'center',
+            gap: 12,
+          }}
+        >
+          <AppText variant="title">Scolary est verrouillé</AppText>
+          <AppText variant="body" color="textMuted">
+            Vos notes, messages et conversations restent sur ce téléphone. Déverrouillez pour les consulter.
+          </AppText>
+          {unlockError ? <AppText variant="caption" color="danger">{unlockError}</AppText> : null}
+          <Button label="Déverrouiller" onPress={() => void unlock()} />
+        </View>
+      ) : null}
     </SafeAreaProvider>
   );
 }
