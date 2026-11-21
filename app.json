@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "studia",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.studia.mobile",
@@ -19,13 +18,17 @@
     },
     "android": {
       "package": "app.studia.mobile",
-      "permissions": ["INTERNET", "CAMERA", "USE_BIOMETRIC", "USE_FINGERPRINT"],
+      "permissions": [
+        "INTERNET",
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#101418",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "plugins": [
       "expo-router",
