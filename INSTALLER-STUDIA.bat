@@ -22,6 +22,7 @@ echo npm     :
 call npm -v
 echo.
 
+if not defined NODE_MAJOR goto no_node
 if %NODE_MAJOR% LSS 20 goto node_old
 
 if exist "node_modules" goto have_modules
