@@ -58,6 +58,19 @@ npm run ios           # idem sur iOS (macOS requis)
 - [Compilation et publication](docs/build-and-release.md).
 - [Politique de confidentialité (brouillon à faire valider)](docs/privacy-policy.md).
 
+## Fonctions scolaires
+
+| Fonction | Nature | Où |
+| --- | --- | --- |
+| Notes, coefficients, moyennes PRONOTE | données telles que publiées | École › Notes |
+| Moyenne pondérée locale | **calcul exact** (`coefficients` ou `points`), méthode affichée | École › Notes, outil `calculate_average` |
+| Simulation de note | **estimation** explicitement étiquetée | outil `simulate_grade` |
+| Progression, comparaison des périodes | graphiques sur données réelles (`react-native-svg`) | École › Notes |
+| Bulletins et appréciations | données PRONOTE | École › Bulletins |
+| Recherche des remarques des professeurs | FTS5 local | outil `search_teacher_feedback`, École › Recherche |
+| Synthèse des messages | données PRONOTE + lecture IA | École › Messages, outils `search_messages` |
+| Planification des devoirs, fiches, QCM, flashcards, bilan hebdo | **généré par l'IA** à partir des données locales | École › Révisions et bilans |
+
 ## Ce que l'application ne fait pas
 
 - Aucune connexion ENT/CAS : Pawnote ne l'expose pas (voir la matrice de capacités).

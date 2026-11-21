@@ -7,7 +7,7 @@ import { useAsyncData } from '@/ui/useAsyncData';
 import { usePalette, spacing } from '@/ui/theme/theme';
 import { AppText, Banner, Button, Card, Chip, Muted, Row, Stat } from '@/ui/components/primitives';
 import { formatRelative } from '@/ui/format';
-import { CAPABILITIES, capabilitiesForTabs, unsupportedCapabilities } from '@/core/pronote/capabilities';
+import { CAPABILITIES, capabilitiesForTabs } from '@/core/pronote/capabilities';
 
 export default function SchoolScreen() {
   const { palette } = usePalette();
@@ -32,12 +32,6 @@ export default function SchoolScreen() {
     const unread = discussions.reduce((total, discussion) => total + discussion.unreadCount, 0);
     return { profile, counts, latest, unread };
   }, [activeAccountId, lastSyncSummary?.runId]);
-
-  const tabs = Object.keys(data?.latest?.resources ?? {}).length > 0 ? null : null;
-  void tabs;
-
-  const unavailable = unsupportedCapabilities([]).length;
-  void unavailable;
 
   if (!account) {
     return (
@@ -113,6 +107,7 @@ export default function SchoolScreen() {
         <Row title="Absences et retards" subtitle="Durées, justificatifs, motifs" onPress={() => router.push('/school/absences')} />
         <Row title="Cantine" subtitle="Menus et allergènes" onPress={() => router.push('/school/canteen')} />
         <Row title="Documents" subtitle="Cahier de textes et pièces jointes" onPress={() => router.push('/school/documents')} />
+        <Row title="Révisions et bilans" subtitle="Bilan hebdomadaire, fiches, QCM, flashcards" onPress={() => router.push('/school/revision')} />
         <Row title="Recherche locale" subtitle="Rechercher dans tout l’historique (FTS5)" onPress={() => router.push('/school/search')} />
       </Card>
 
