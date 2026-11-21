@@ -108,6 +108,7 @@ Politique de confidentialité (brouillon à faire valider) :
 
 ## Documentation
 
+- [Lancer l'application sur votre PC](docs/LANCER_SUR_PC.md) — émulateur Android, de A à Z.
 - [Guide Windows](docs/GUIDE_INSTALLATION_WINDOWS.md) — installation de A à Z.
 - [Guide de tests](docs/GUIDE_TESTS.md) — automatiques et manuels.
 - [Compatibilité Android / iOS](docs/COMPATIBILITE_ANDROID_IOS.md) — matrice vérifiée.

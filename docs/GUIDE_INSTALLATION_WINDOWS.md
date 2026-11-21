@@ -342,6 +342,8 @@ alors la méthode E.2 ou transférez l'APK par e-mail.
 
 ### E.2 Émulateur Android (nécessite Android Studio)
 
+Procédure détaillée, clic par clic : **`docs/LANCER_SUR_PC.md`**.
+
 Android Studio installe le SDK, l'émulateur et `adb`. Comptez 6 Go de téléchargement.
 
 1. <https://developer.android.com/studio> → téléchargez et installez.
