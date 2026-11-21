@@ -7,6 +7,7 @@ import { EncryptionUnavailableError } from '@/db/expoDriver';
 import { createConversation, sendChatTurn, getModel } from '@/providers/ai/service';
 import { syncAccount } from '@/providers/pronote/service';
 import { makeId } from '@/core/util/ids';
+import { planRegeneration } from '@/core/ai/conversation';
 
 type AppStatus = 'booting' | 'ready' | 'fatal';
 
@@ -32,6 +33,7 @@ type AppState = {
   startNewConversation: () => Promise<void>;
   openConversation: (conversationId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
+  regenerate: () => Promise<void>;
   cancel: () => void;
   syncNow: (kind: 'initial' | 'manual' | 'incremental') => Promise<void>;
   clearError: () => void;
@@ -185,6 +187,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     if (result.requiresConsent) set({ lastError: 'consent_required' });
+  },
+
+  async regenerate() {
+    const { repos, conversationId, messages, streaming } = get();
+    if (!repos || !conversationId || streaming) return;
+    const lastUser = [...messages].reverse().find((message) => message.role === 'user');
+    if (!lastUser) return;
+
+    // Dropping the trailing turn (user + assistant) keeps the stored history free of
+    // duplicates while the model regenerates the same question.
+    const index = messages.indexOf(lastUser);
+    for (const message of messages.slice(index)) {
+      await repos.chat.deleteMessage(message.id);
+    }
+    const remaining = await repos.chat.listMessages(conversationId, 200);
+    set({ messages: remaining, lastError: null });
+    await get().send(lastUser.contentText);
   },
 
   cancel() {

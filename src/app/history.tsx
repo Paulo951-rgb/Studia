@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/state/appStore';
 import { useAsyncData } from '@/ui/useAsyncData';
@@ -13,9 +13,17 @@ export default function HistoryScreen() {
   const activeConversationId = useAppStore((state) => state.conversationId);
   const openConversation = useAppStore((state) => state.openConversation);
   const startNewConversation = useAppStore((state) => state.startNewConversation);
+  const activeAccountId = useAppStore((state) => state.activeAccountId);
   const [nonce, setNonce] = useState(0);
+  const [query, setQuery] = useState('');
 
-  const { data, loading } = useAsyncData(async (repos) => repos.chat.listConversations(100), [nonce]);
+  const { data, loading } = useAsyncData(async (repos) => {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2 && activeAccountId) {
+      return repos.chat.searchConversations(activeAccountId, trimmed, 50);
+    }
+    return repos.chat.listConversations(100);
+  }, [nonce, query, activeAccountId]);
 
   const remove = (id: string) => {
     Alert.alert('Supprimer cette conversation ?', 'Les messages seront supprimés de cet appareil.', [
@@ -35,8 +43,28 @@ export default function HistoryScreen() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
       <Button label="Nouvelle conversation" onPress={() => void startNewConversation().then(() => router.back())} />
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Rechercher dans mes conversations…"
+        placeholderTextColor={palette.textFaint}
+        style={{
+          backgroundColor: palette.surface,
+          borderWidth: 1,
+          borderColor: palette.border,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          color: palette.text,
+        }}
+      />
       {loading ? <Spinner /> : null}
-      {data && data.length === 0 ? <EmptyState title="Aucune conversation" description="Vos échanges restent sur cet appareil." /> : null}
+      {data && data.length === 0 ? (
+        <EmptyState
+          title={query.trim().length >= 2 ? 'Aucun résultat' : 'Aucune conversation'}
+          description={query.trim().length >= 2 ? 'La recherche porte sur le contenu des messages enregistrés.' : 'Vos échanges restent sur cet appareil.'}
+        />
+      ) : null}
       <Card style={{ gap: 0 }}>
         {data?.map((conversation) => (
           <Row

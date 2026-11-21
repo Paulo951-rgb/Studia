@@ -11,7 +11,7 @@
 
 ```bash
 npm install
-npm run verify     # tsc --noEmit + tsc -p tsconfig.test.json + 81 tests
+npm run verify     # tsc --noEmit + tsc -p tsconfig.test.json + 85 tests
 ```
 
 Aucune étape de build n'est nécessaire pour lancer les tests : ils utilisent `node:sqlite`

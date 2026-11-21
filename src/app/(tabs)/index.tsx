@@ -35,9 +35,12 @@ export default function ChatScreen() {
   const send = useAppStore((state) => state.send);
   const cancel = useAppStore((state) => state.cancel);
   const startNewConversation = useAppStore((state) => state.startNewConversation);
+  const regenerate = useAppStore((state) => state.regenerate);
+  const model = useAppStore((state) => state.model);
 
   const [input, setInput] = useState('');
   const [consent, setConsent] = useState<boolean | null>(null);
+  const [attachmentNotice, setAttachmentNotice] = useState(false);
 
   const account = accounts.find((entry) => entry.id === activeAccountId) ?? null;
 
@@ -95,6 +98,7 @@ export default function ChatScreen() {
           tone={consent === false ? 'warning' : 'neutral'}
           onPress={() => router.push('/settings/ai')}
         />
+        <Chip label={model} tone="neutral" onPress={() => router.push('/settings/ai')} />
       </View>
 
       {consent === false ? (
@@ -143,8 +147,9 @@ export default function ChatScreen() {
           </View>
         ) : null}
 
-        {messages.map((message) => {
+        {messages.map((message, messageIndex) => {
           const isUser = message.role === 'user';
+          const isLast = messageIndex === messages.length - 1;
           return (
             <View
               key={message.id}
@@ -171,9 +176,16 @@ export default function ChatScreen() {
                 <Muted style={{ color: palette.danger }}>{AI_ERROR_LABELS[message.errorCode] ?? message.errorCode}</Muted>
               ) : null}
               {!isUser && message.contentText ? (
-                <Pressable onPress={() => void Clipboard.setStringAsync(message.contentText)}>
-                  <Muted>Copier</Muted>
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                  <Pressable onPress={() => void Clipboard.setStringAsync(message.contentText)}>
+                    <Muted>Copier</Muted>
+                  </Pressable>
+                  {isLast && !streaming ? (
+                    <Pressable onPress={() => void regenerate()} accessibilityLabel="Régénérer la réponse">
+                      <Muted>Régénérer</Muted>
+                    </Pressable>
+                  ) : null}
+                </View>
               ) : null}
             </View>
           );
@@ -210,6 +222,17 @@ export default function ChatScreen() {
         ) : null}
       </ScrollView>
 
+      {attachmentNotice ? (
+        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+          <Banner
+            tone="warning"
+            title="Pièces jointes non disponibles"
+            description="L'envoi de fichiers à l'API Responses n'est pas implémenté dans cette version : aucun fichier n'est transmis. Utilisez les outils scolaires (documents, messages) pour que l'assistant lise les métadonnées déjà synchronisées."
+            action={{ label: 'Fermer', onPress: () => setAttachmentNotice(false) }}
+          />
+        </View>
+      ) : null}
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View
           style={{
@@ -234,6 +257,13 @@ export default function ChatScreen() {
               padding: spacing.sm,
             }}
           >
+            <Pressable
+              onPress={() => setAttachmentNotice(true)}
+              style={{ paddingHorizontal: 6, paddingBottom: 8 }}
+              accessibilityLabel="Joindre un fichier"
+            >
+              <AppText style={{ color: palette.textMuted, fontSize: 18 }}>＋</AppText>
+            </Pressable>
             <TextInput
               value={input}
               onChangeText={setInput}

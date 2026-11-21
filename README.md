@@ -20,7 +20,7 @@ Ce dépôt ne contient que ce qui est démontrable. Vérifié à ce jour :
 | Élément | Statut |
 | --- | --- |
 | TypeScript strict (`tsc --noEmit` + config tests) | ✅ passe |
-| 81 tests automatisés (`npm test`) | ✅ passent |
+| 85 tests automatisés (`npm test`) | ✅ passent |
 | Bundle Metro Android et iOS (`expo export -p android` / `-p ios`) | ✅ se construisent |
 | Écran de chat, écrans École, réglages, connexion PRONOTE | ✅ implémentés |
 | Connecteur PRONOTE contre un vrai établissement | ❌ **non testé** (aucun identifiant réel disponible) — test de contrat prêt : `npm run test:contract` |

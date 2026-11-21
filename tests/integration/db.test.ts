@@ -164,6 +164,49 @@ test('conversations and messages are stored locally with FTS indexing', async ()
   assert.equal(afterDelete.length, 0);
 });
 
+test('conversation search matches message content through FTS5 and stays account-scoped', async () => {
+  const repos = await createTestRepositories();
+  const conversation = (id: string, title: string, accountId: string) => ({
+    id,
+    accountId,
+    title,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    memoryEnabled: true,
+    model: 'gpt-4.1-mini',
+    archived: false,
+  });
+  const chatMessage = (id: string, conversationId: string, contentText: string) => ({
+    id,
+    conversationId,
+    role: 'user' as const,
+    contentText,
+    toolCalls: null,
+    toolCallId: null,
+    toolName: null,
+    status: 'complete' as const,
+    errorCode: null,
+    createdAt: '2026-03-01T00:00:01.000Z',
+  });
+
+  await repos.chat.createConversation(conversation('conv_maths', 'Mathématiques', ACCOUNT_ID));
+  await repos.chat.addMessage(chatMessage('cm_maths', 'conv_maths', 'Explique-moi le théorème de Pythagore.'));
+  await repos.chat.createConversation(conversation('conv_history', 'Histoire', ACCOUNT_ID));
+  await repos.chat.addMessage(chatMessage('cm_history', 'conv_history', 'Résume la révolution industrielle.'));
+  await repos.accounts.save({ ...account, id: 'acc_other', displayName: 'Autre compte' });
+  await repos.chat.createConversation(conversation('conv_other', 'Autre compte', 'acc_other'));
+  await repos.chat.addMessage(chatMessage('cm_other', 'conv_other', 'Théorème de Pythagore, autre compte.'));
+
+  const hits = await repos.chat.searchConversations(ACCOUNT_ID, 'pythagore');
+  assert.deepEqual(hits.map((entry) => entry.id), ['conv_maths']);
+
+  assert.equal((await repos.chat.searchConversations(ACCOUNT_ID, 'zzz')).length, 0);
+  assert.equal((await repos.chat.searchConversations(ACCOUNT_ID, '   ')).length, 0);
+
+  await repos.chat.deleteMessage('cm_maths');
+  assert.equal((await repos.chat.searchConversations(ACCOUNT_ID, 'pythagore')).length, 0);
+});
+
 test('memories can be listed, cleared by scope and deleted', async () => {
   const repos = await createTestRepositories();
   const base = {

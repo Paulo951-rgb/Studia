@@ -1,5 +1,6 @@
 import type { SqlDatabase } from '@/db/driver';
 import { parseJsonArray, toBoolean } from '@/db/driver';
+import { buildMatchExpression } from '@/core/search/query';
 import { upsert } from '@/db/upsert';
 import type { ChatMessage, Conversation } from '@/core/domain/types';
 import type { createSearchRepo } from '@/db/repositories/search';
@@ -45,6 +46,37 @@ export function createChatRepo(db: SqlDatabase, search: ReturnType<typeof create
         created_at: string;
         updated_at: string;
       }>('SELECT * FROM conversations WHERE archived = 0 ORDER BY updated_at DESC LIMIT ?', [limit]);
+      return rows.map((row) => ({
+        id: row.id,
+        accountId: row.account_id,
+        title: row.title,
+        model: row.model,
+        memoryEnabled: toBoolean(row.memory_enabled),
+        archived: toBoolean(row.archived),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    },
+    async searchConversations(accountId: string, query: string, limit = 30): Promise<Conversation[]> {
+      const match = buildMatchExpression(query);
+      if (!match) return [];
+      const rows = await db.all<{
+        id: string;
+        account_id: string | null;
+        title: string;
+        model: string;
+        memory_enabled: number;
+        archived: number;
+        created_at: string;
+        updated_at: string;
+      }>(
+        `SELECT DISTINCT c.* FROM conversations c
+         JOIN chat_messages m ON m.conversation_id = c.id
+         JOIN search_index ON search_index.kind = 'chat_message' AND search_index.ref_id = m.id
+         WHERE c.account_id = ? AND c.archived = 0 AND search_index MATCH ?
+         ORDER BY c.updated_at DESC LIMIT ?`,
+        [accountId, match, Math.min(Math.max(limit, 1), 100)],
+      );
       return rows.map((row) => ({
         id: row.id,
         accountId: row.account_id,

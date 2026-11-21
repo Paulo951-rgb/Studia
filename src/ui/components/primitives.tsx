@@ -306,7 +306,17 @@ export function Spinner({ label }: { label?: string }) {
   );
 }
 
-export function Banner({ tone, title, description }: { tone: 'warning' | 'danger' | 'info'; title: string; description?: string }) {
+export function Banner({
+  tone,
+  title,
+  description,
+  action,
+}: {
+  tone: 'warning' | 'danger' | 'info';
+  title: string;
+  description?: string;
+  action?: { label: string; onPress: () => void };
+}) {
   const { palette } = usePalette();
   const color = tone === 'danger' ? palette.danger : tone === 'warning' ? palette.warning : palette.accent;
   return (
@@ -324,6 +334,13 @@ export function Banner({ tone, title, description }: { tone: 'warning' | 'danger
         {title}
       </AppText>
       {description ? <Muted>{description}</Muted> : null}
+      {action ? (
+        <Pressable onPress={action.onPress} style={{ paddingTop: 4 }} accessibilityRole="button">
+          <AppText variant="caption" style={{ color, fontWeight: '600' }}>
+            {action.label}
+          </AppText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

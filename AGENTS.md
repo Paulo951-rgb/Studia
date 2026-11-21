@@ -47,6 +47,6 @@ SQLite : les dépôts tournent sur une vraie base en mémoire.
 
 ## État
 
-- 81 tests passent, typecheck strict OK, bundles Android et iOS OK.
+- 85 tests passent, typecheck strict OK, bundles Android et iOS OK.
 - Non testé faute de moyens : connexion PRONOTE réelle, appels OpenAI réels, SQLCipher et
   tâche de fond sur appareil. Voir `docs/build-and-release.md` §7.
