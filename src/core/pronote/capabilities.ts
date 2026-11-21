@@ -109,7 +109,7 @@ export const CAPABILITIES: Capability[] = [
     status: 'supported',
     api: ['assignmentsFromWeek', 'assignmentsFromIntervals', 'assignmentStatus'],
     requiresTab: TAB_LOCATIONS.assignments,
-    notes: '`assignmentStatus` permet de cocher un devoir comme fait ; l’app ne l’appelle que sur action explicite de l’utilisateur.',
+    notes: 'Lecture seule en pratique : l’état « fait » est stocké localement. `assignmentStatus` (écriture côté PRONOTE) existe dans le connecteur mais n’est pas appelée, faute de vérification sur un compte réel.',
   },
   {
     key: 'notebook_contents',

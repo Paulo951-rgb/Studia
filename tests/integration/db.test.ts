@@ -314,3 +314,27 @@ test('AI usage is aggregated locally without inventing a cost for unknown models
   await repos.accounts.remove(ACCOUNT_ID);
   assert.equal((await repos.usage.recent(10)).length, 0, 'deleting the account clears its usage history');
 });
+
+test('a local "done" mark survives a later sync that reports the homework as not done', async () => {
+  const repos = await createTestRepositories();
+  await seedSchool(repos);
+  await repos.writer.saveHomework(ACCOUNT_ID, [homework], false);
+  await repos.writer.setHomeworkDone(ACCOUNT_ID, homework.id, true);
+
+  const stored = (await repos.school.listHomework({ accountId: ACCOUNT_ID, includeDone: true, limit: 10 }))[0];
+  assert.equal(stored?.done, true);
+
+  // PRONOTE still reports done=false: the local tick must not be lost.
+  await repos.writer.saveHomework(
+    ACCOUNT_ID,
+    [{ ...homework, description: 'Description mise à jour', done: false }],
+    false,
+  );
+  const afterSync = (await repos.school.listHomework({ accountId: ACCOUNT_ID, includeDone: true, limit: 10 }))[0];
+  assert.equal(afterSync?.done, true);
+  assert.equal(afterSync?.description, 'Description mise à jour');
+
+  await repos.writer.setHomeworkDone(ACCOUNT_ID, homework.id, false);
+  const unticked = (await repos.school.listHomework({ accountId: ACCOUNT_ID, includeDone: true, limit: 10 }))[0];
+  assert.equal(unticked?.done, false);
+});

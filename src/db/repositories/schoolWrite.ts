@@ -345,6 +345,13 @@ export function createSchoolWriter(db: SqlDatabase, search: ReturnType<typeof cr
 
     async saveHomework(accountId: string, homework: Homework[], complete: boolean): Promise<WriteStats> {
       const stats = emptyStats();
+      // "Done" is also a local mark: PRONOTE does not own this state for the app, so a
+      // re-sync must never un-tick something the student ticked here.
+      const stored = await db.all<{ native_id: string; done: number }>(
+        'SELECT native_id, done FROM homework WHERE account_id = ?',
+        [accountId],
+      );
+      const doneLocally = new Map(stored.map((row) => [row.native_id, row.done === 1]));
       for (const item of homework) {
         const hash = contentHash(item);
         const outcome = await upsert(
@@ -358,7 +365,7 @@ export function createSchoolWriter(db: SqlDatabase, search: ReturnType<typeof cr
             subject_name: item.subjectName,
             description: item.description,
             deadline: item.deadline,
-            done: fromBoolean(item.done),
+            done: fromBoolean(item.done || (doneLocally.get(item.nativeId) ?? false)),
             difficulty: item.difficulty,
             estimated_minutes: item.estimatedMinutes,
             themes_json: JSON.stringify(item.themes),

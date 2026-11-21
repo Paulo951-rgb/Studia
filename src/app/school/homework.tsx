@@ -4,15 +4,17 @@ import * as Linking from 'expo-linking';
 import { useAppStore } from '@/state/appStore';
 import { useAsyncData } from '@/ui/useAsyncData';
 import { usePalette, spacing } from '@/ui/theme/theme';
-import { AppText, Card, Chip, EmptyState, Muted, Row, Spinner } from '@/ui/components/primitives';
+import { AppText, Button, Card, Chip, EmptyState, Muted, Row, Spinner } from '@/ui/components/primitives';
 import { formatDateTime } from '@/ui/format';
 
 export default function HomeworkScreen() {
   const { palette } = usePalette();
   const activeAccountId = useAppStore((state) => state.activeAccountId);
+  const repos = useAppStore((state) => state.repos);
   const [showDone, setShowDone] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const { data, loading } = useAsyncData(async (repos) => {
+  const { data, loading, reload } = useAsyncData(async (repos) => {
     if (!activeAccountId) return null;
     const items = await repos.school.listHomework({ accountId: activeAccountId, includeDone: true, limit: 200 });
     return items;
@@ -28,6 +30,17 @@ export default function HomeworkScreen() {
   }
 
   const visible = data.filter((item) => (showDone ? true : !item.done));
+
+  const toggleDone = async (homeworkId: string, done: boolean) => {
+    if (!repos || !activeAccountId || busyId) return;
+    setBusyId(homeworkId);
+    try {
+      await repos.writer.setHomeworkDone(activeAccountId, homeworkId, done);
+      await reload();
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl }}>
@@ -55,6 +68,12 @@ export default function HomeworkScreen() {
               .filter(Boolean)
               .join(' · ')}
           </Muted>
+          <Button
+            label={item.done ? 'Marquer à faire' : 'Marquer comme fait'}
+            variant="secondary"
+            disabled={busyId !== null}
+            onPress={() => void toggleDone(item.id, !item.done)}
+          />
           {item.attachments.length > 0 ? (
             <View style={{ gap: 4 }}>
               {item.attachments.map((attachment) => (
@@ -73,7 +92,8 @@ export default function HomeworkScreen() {
         </Card>
       ))}
       <Muted style={{ color: palette.textFaint }}>
-        Les devoirs cochés proviennent de PRONOTE. L’application ne modifie pas l’état des devoirs côté PRONOTE.
+        Le marquage « fait » reste sur ce téléphone et n’est jamais renvoyé à l’établissement. L’écriture de cet
+        état côté PRONOTE existe dans le connecteur mais n’est pas activée : elle n’a pas été vérifiée sur un compte réel.
       </Muted>
     </ScrollView>
   );

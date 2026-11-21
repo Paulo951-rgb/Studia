@@ -246,14 +246,22 @@ async function maybeSyncOnOpen(
   const stale = Date.now() - last > 10 * 60 * 1000;
   if (!stale) return;
   set({ syncRunning: true });
-  const summary = await syncAccount(repos, activeAccountId, { kind: 'incremental' });
-  const accounts = await repos.accounts.list();
-  set({
-    syncRunning: false,
-    lastSyncSummary: summary,
-    lastSyncAt: accounts.find((entry) => entry.id === activeAccountId)?.lastSyncAt ?? null,
-    accounts,
-  });
+  try {
+    const summary = await syncAccount(repos, activeAccountId, { kind: 'incremental' });
+    const accounts = await repos.accounts.list();
+    set({
+      syncRunning: false,
+      lastSyncSummary: summary,
+      lastSyncAt: accounts.find((entry) => entry.id === activeAccountId)?.lastSyncAt ?? null,
+      accounts,
+    });
+  } catch (error) {
+    // A failed background sync must never leave the refresh button disabled.
+    set({
+      syncRunning: false,
+      lastError: error instanceof Error ? error.message : 'Synchronisation automatique impossible.',
+    });
+  }
 }
 
 export function useActiveAccount(): Account | null {

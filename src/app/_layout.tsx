@@ -74,6 +74,7 @@ export default function RootLayout() {
         <Stack.Screen name="school/absences" options={{ title: 'Absences et retards' }} />
         <Stack.Screen name="school/canteen" options={{ title: 'Cantine' }} />
         <Stack.Screen name="school/documents" options={{ title: 'Documents' }} />
+        <Stack.Screen name="school/revision" options={{ title: 'Révisions et bilans' }} />
         <Stack.Screen name="school/search" options={{ title: 'Recherche' }} />
       </Stack>
     </SafeAreaProvider>
