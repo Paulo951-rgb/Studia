@@ -6,6 +6,7 @@ import { createToolRunner } from '@/core/ai/toolRunner';
 import { TOOLS } from '@/core/ai/tools';
 import { SYSTEM_INSTRUCTIONS, sanitizeUntrustedText } from '@/core/ai/prompt';
 import { getOpenAiKey } from '@/platform/secureStore';
+import { estimateCostUsd } from '@/core/ai/cost';
 import { makeId } from '@/core/util/ids';
 import type { AiMemory, ChatMessage } from '@/core/domain/types';
 
@@ -74,6 +75,8 @@ export type SendTurnResult = {
   errorCode: AgentTurnResult['errorCode'];
   requiresConsent: boolean;
   requiresApiKey: boolean;
+  /** Local estimate for the user's own key; `null` when the model is not priced. */
+  estimatedCostUsd?: number | null;
 };
 
 /**
@@ -162,12 +165,29 @@ export async function sendChatTurn(options: SendTurnOptions): Promise<SendTurnRe
   await repos.chat.addMessage(assistantMessage);
   await repos.chat.touchConversation(conversationId);
 
+  const inputTokens = result.usage?.inputTokens ?? null;
+  const outputTokens = result.usage?.outputTokens ?? null;
+  const estimatedCostUsd = estimateCostUsd(model, inputTokens, outputTokens);
+  if (inputTokens !== null || outputTokens !== null) {
+    await repos.usage.record({
+      id: makeId('usage', assistantMessageId),
+      accountId,
+      conversationId,
+      model,
+      inputTokens,
+      outputTokens,
+      estimatedCostUsd,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
   return {
     assistantMessageId,
     text: result.text,
     errorCode: result.errorCode,
     requiresConsent: false,
     requiresApiKey: false,
+    estimatedCostUsd,
   };
 }
 
@@ -219,6 +239,8 @@ export const AI_ERROR_LABELS: Record<string, string> = {
   server_error: 'OpenAI a renvoyé une erreur serveur.',
   bad_request: 'Requête refusée par OpenAI.',
   cancelled: 'Réponse annulée.',
+  timeout: 'OpenAI n’a pas répondu dans le délai imparti.',
+  tool_round_limit: "L’assistant a enchaîné trop d’appels d’outils ; reformulez la question.", 
   stream_interrupted: 'Le flux de réponse a été interrompu.',
   consent_required: "Consentement d'envoi des données à OpenAI requis.",
   memory_disabled: 'Mémoire désactivée.',

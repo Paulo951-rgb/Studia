@@ -5,6 +5,7 @@ import { createChatRepo, createSettingsRepo } from '@/db/repositories/chat';
 import { createSchoolReader } from '@/db/repositories/schoolRead';
 import { createSchoolWriter } from '@/db/repositories/schoolWrite';
 import { createSearchRepo } from '@/db/repositories/search';
+import { createUsageRepo } from '@/db/repositories/usage';
 
 export function createRepositories(db: SqlDatabase) {
   const search = createSearchRepo(db);
@@ -17,6 +18,7 @@ export function createRepositories(db: SqlDatabase) {
     school: createSchoolReader(db),
     writer: createSchoolWriter(db, search),
     chat: createChatRepo(db, search),
+    usage: createUsageRepo(db),
     settings: createSettingsRepo(db),
     async migrate(): Promise<number> {
       return applyMigrations(db);

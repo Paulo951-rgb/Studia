@@ -478,6 +478,30 @@ export const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    version: 2,
+    name: 'ai-usage-and-hot-indexes',
+    statements: [
+      // Token accounting stays local: the key belongs to the user, so the cost
+      // estimate must be visible to them without any telemetry.
+      `CREATE TABLE IF NOT EXISTS ai_usage (
+        id TEXT PRIMARY KEY,
+        account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE,
+        conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+        model TEXT NOT NULL,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        estimated_cost_usd REAL,
+        created_at TEXT NOT NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS ai_usage_created_idx ON ai_usage(created_at)`,
+      `CREATE INDEX IF NOT EXISTS ai_usage_account_idx ON ai_usage(account_id, created_at)`,
+      `CREATE INDEX IF NOT EXISTS canteen_menus_date_idx ON canteen_menus(account_id, menu_date)`,
+      `CREATE INDEX IF NOT EXISTS documents_dates_idx ON documents(account_id, starts_at)`,
+      `CREATE INDEX IF NOT EXISTS messages_sent_idx ON messages(discussion_id, sent_at)`,
+      `CREATE INDEX IF NOT EXISTS ai_memories_account_idx ON ai_memories(account_id, scope)`,
+    ],
+  },
 ];
 
 export async function applyMigrations(db: SqlDatabase, migrations: Migration[] = MIGRATIONS): Promise<number> {

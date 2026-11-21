@@ -266,3 +266,51 @@ test('sessions never store the PRONOTE token itself', async () => {
   assert.equal(Object.keys(row).some((key) => /token|password|secret_value/i.test(key)), false);
   assert.equal(row['account_id'], account.id);
 });
+
+test('AI usage is aggregated locally without inventing a cost for unknown models', async () => {
+  const repos = await createTestRepositories();
+  await seedSchool(repos);
+  await repos.usage.record({
+    id: 'use_1',
+    accountId: ACCOUNT_ID,
+    conversationId: null,
+    model: 'gpt-4.1-mini',
+    inputTokens: 1_000_000,
+    outputTokens: 0,
+    estimatedCostUsd: 0.4,
+    createdAt: '2026-03-01T10:00:00.000Z',
+  });
+  await repos.usage.record({
+    id: 'use_2',
+    accountId: ACCOUNT_ID,
+    conversationId: null,
+    model: 'modele-inconnu',
+    inputTokens: 500,
+    outputTokens: 500,
+    estimatedCostUsd: null,
+    createdAt: '2026-03-02T10:00:00.000Z',
+  });
+  await repos.usage.record({
+    id: 'use_old',
+    accountId: ACCOUNT_ID,
+    conversationId: null,
+    model: 'gpt-4.1-mini',
+    inputTokens: 10,
+    outputTokens: 10,
+    estimatedCostUsd: 0.1,
+    createdAt: '2025-01-01T10:00:00.000Z',
+  });
+
+  const summary = await repos.usage.summary({ accountId: ACCOUNT_ID, since: '2026-03-01T00:00:00.000Z' });
+  assert.equal(summary.requests, 2);
+  assert.equal(summary.inputTokens, 1_000_500);
+  assert.equal(summary.outputTokens, 500);
+  assert.equal(summary.estimatedCostUsd, 0.4);
+  assert.equal(summary.unknownCostRequests, 1);
+
+  const recent = await repos.usage.recent(10);
+  assert.equal(recent[0]?.id, 'use_2');
+
+  await repos.accounts.remove(ACCOUNT_ID);
+  assert.equal((await repos.usage.recent(10)).length, 0, 'deleting the account clears its usage history');
+});

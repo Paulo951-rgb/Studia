@@ -31,6 +31,8 @@ export type AiErrorCode =
   | 'server_error'
   | 'bad_request'
   | 'cancelled'
+  | 'timeout'
+  | 'tool_round_limit'
   | 'stream_interrupted'
   | 'consent_required'
   | 'memory_disabled'
@@ -46,6 +48,8 @@ export type AgentTurnResult = {
   toolCalls: { name: string; arguments: string; ok: boolean; errorCode?: string }[];
   responseId: string | null;
   errorCode: AiErrorCode | null;
+  /** Sum of the provider usage across the tool rounds, when the API returns it. */
+  usage?: { inputTokens: number | null; outputTokens: number | null };
 };
 
 export type AgentTurnOptions = {
@@ -93,6 +97,9 @@ export async function runAgentTurn(options: AgentTurnOptions): Promise<AgentTurn
   let text = '';
   let responseId: string | null = null;
   const executed: AgentTurnResult['toolCalls'] = [];
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+  const totalUsage = () => ({ inputTokens, outputTokens });
 
   for (let round = 0; round < maxToolRounds; round += 1) {
     const pendingCalls: { callId: string; name: string; arguments: string }[] = [];
@@ -106,16 +113,24 @@ export async function runAgentTurn(options: AgentTurnOptions): Promise<AgentTurn
         pendingCalls.push({ callId: event.callId, name: event.name, arguments: event.arguments });
       } else if (event.type === 'completed') {
         responseId = event.responseId;
+        if (event.usage) {
+          if (typeof event.usage.inputTokens === 'number') {
+            inputTokens = (inputTokens ?? 0) + event.usage.inputTokens;
+          }
+          if (typeof event.usage.outputTokens === 'number') {
+            outputTokens = (outputTokens ?? 0) + event.usage.outputTokens;
+          }
+        }
       } else if (event.type === 'error') {
         roundError = { code: event.code, message: event.message };
       }
     }
 
     if (roundError) {
-      return { text, toolCalls: executed, responseId, errorCode: roundError.code };
+      return { text, toolCalls: executed, responseId, errorCode: roundError.code, usage: totalUsage() };
     }
     if (pendingCalls.length === 0) {
-      return { text, toolCalls: executed, responseId, errorCode: null };
+      return { text, toolCalls: executed, responseId, errorCode: null, usage: totalUsage() };
     }
 
     for (const call of pendingCalls) {
@@ -157,5 +172,7 @@ export async function runAgentTurn(options: AgentTurnOptions): Promise<AgentTurn
     }
   }
 
-  return { text, toolCalls: executed, responseId, errorCode: null };
+  // The round limit was reached with calls still pending: say so instead of returning
+  // an empty answer that looks like a silent failure.
+  return { text, toolCalls: executed, responseId, errorCode: 'tool_round_limit', usage: totalUsage() };
 }

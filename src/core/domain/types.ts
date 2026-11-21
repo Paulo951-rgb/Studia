@@ -396,3 +396,24 @@ export type SearchHit = {
   snippet: string;
   score: number;
 };
+
+export type AiUsage = {
+  id: string;
+  accountId: string | null;
+  conversationId: string | null;
+  model: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  /** `null` when the model is not in the local pricing table: no invented amount. */
+  estimatedCostUsd: number | null;
+  createdAt: IsoDateTime;
+};
+
+export type AiUsageSummary = {
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+  /** Requests whose cost could not be estimated (unknown model or no usage returned). */
+  unknownCostRequests: number;
+};

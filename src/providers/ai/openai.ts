@@ -19,6 +19,8 @@ export type OpenAiProviderOptions = {
   apiKey: string;
   baseUrl?: string;
   fetchImpl: typeof fetch;
+  /** Abort the request when the provider sends nothing for this long. */
+  timeoutMs?: number;
   /** Injected for tests. */
   now?: () => number;
 };
@@ -72,12 +74,29 @@ function buildRequestBody(request: ProviderRequest, stream: boolean): Record<str
   };
 }
 
+type PendingCall = { itemId: string; callId: string; name: string; arguments: string };
+
 type StreamState = {
   text: string;
-  calls: Map<string, { callId: string; name: string; arguments: string }>;
+  /** Keyed by item id: argument deltas are sent with `item_id`, not `call_id`. */
+  calls: Map<string, PendingCall>;
   responseId: string | null;
   usage: { inputTokens: number | null; outputTokens: number | null } | undefined;
 };
+
+function upsertCall(
+  calls: Map<string, PendingCall>,
+  key: string,
+  patch: Partial<Omit<PendingCall, 'itemId'>>,
+): void {
+  const existing = calls.get(key);
+  calls.set(key, {
+    itemId: key,
+    callId: patch.callId || existing?.callId || '',
+    name: patch.name || existing?.name || '',
+    arguments: patch.arguments !== undefined ? patch.arguments : (existing?.arguments ?? ''),
+  });
+}
 
 function handleStreamEvent(rawEvent: string | null, payload: Record<string, unknown>, state: StreamState): ProviderEvent[] {
   const type = (payload['type'] as string | undefined) ?? rawEvent ?? '';
@@ -95,8 +114,10 @@ function handleStreamEvent(rawEvent: string | null, payload: Record<string, unkn
     case 'response.output_item.added': {
       const item = payload['item'] as Record<string, unknown> | undefined;
       if (item?.['type'] === 'function_call' && typeof item['call_id'] === 'string') {
-        state.calls.set(item['call_id'], {
-          callId: item['call_id'],
+        const callId = item['call_id'];
+        const itemId = typeof item['id'] === 'string' ? item['id'] : callId;
+        upsertCall(state.calls, itemId, {
+          callId,
           name: typeof item['name'] === 'string' ? item['name'] : '',
           arguments: typeof item['arguments'] === 'string' ? item['arguments'] : '',
         });
@@ -104,23 +125,29 @@ function handleStreamEvent(rawEvent: string | null, payload: Record<string, unkn
       break;
     }
     case 'response.function_call_arguments.delta': {
-      const callId = payload['item_id'] as string | undefined;
+      const itemId = payload['item_id'] as string | undefined;
       const delta = payload['delta'];
-      if (callId && typeof delta === 'string') {
-        const existing = state.calls.get(callId);
-        if (existing) existing.arguments += delta;
-        else state.calls.set(callId, { callId, name: '', arguments: delta });
+      if (itemId && typeof delta === 'string') {
+        const existing = state.calls.get(itemId);
+        upsertCall(state.calls, itemId, { arguments: `${existing?.arguments ?? ''}${delta}` });
       }
       break;
     }
     case 'response.output_item.done': {
       const item = payload['item'] as Record<string, unknown> | undefined;
       if (item?.['type'] === 'function_call') {
-        const callId = typeof item['call_id'] === 'string' ? item['call_id'] : String(item['id'] ?? '');
+        const callId = typeof item['call_id'] === 'string' ? item['call_id'] : '';
+        const itemId = typeof item['id'] === 'string' ? item['id'] : callId;
         const name = typeof item['name'] === 'string' ? item['name'] : '';
         const args = typeof item['arguments'] === 'string' ? item['arguments'] : '';
-        const existing = state.calls.get(callId);
-        state.calls.set(callId, { callId, name: name || existing?.name || '', arguments: args || existing?.arguments || '' });
+        const known =
+          state.calls.get(itemId) ??
+          [...state.calls.values()].find((call) => callId.length > 0 && call.callId === callId);
+        upsertCall(state.calls, itemId, {
+          callId: callId || known?.callId || '',
+          name: name || known?.name || '',
+          arguments: args || known?.arguments || '',
+        });
       }
       break;
     }
@@ -177,8 +204,10 @@ function parseNonStreamingResponse(payload: Record<string, unknown>, state: Stre
         }
       }
     } else if (item['type'] === 'function_call' && typeof item['call_id'] === 'string') {
-      state.calls.set(item['call_id'], {
-        callId: item['call_id'],
+      const callId = item['call_id'];
+      const itemId = typeof item['id'] === 'string' ? item['id'] : callId;
+      upsertCall(state.calls, itemId, {
+        callId,
         name: typeof item['name'] === 'string' ? item['name'] : '',
         arguments: typeof item['arguments'] === 'string' ? item['arguments'] : '{}',
       });
@@ -206,6 +235,7 @@ function parseNonStreamingResponse(payload: Record<string, unknown>, state: Stre
 
 export function createOpenAiProvider(options: OpenAiProviderOptions): AiProvider {
   const baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+  const timeoutMs = options.timeoutMs ?? 120_000;
 
   return {
     id: 'openai-responses',
@@ -216,6 +246,22 @@ export function createOpenAiProvider(options: OpenAiProviderOptions): AiProvider
       }
 
       const state: StreamState = { text: '', calls: new Map(), responseId: null, usage: undefined };
+
+      // The caller's signal must stay authoritative (stop button), so the timeout is
+      // combined into a single controller instead of replacing it.
+      const controller = new AbortController();
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, timeoutMs);
+      const onCallerAbort = () => controller.abort();
+      signal?.addEventListener('abort', onCallerAbort);
+      const release = () => {
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', onCallerAbort);
+      };
+
       const send = async (stream: boolean): Promise<Response> =>
         options.fetchImpl(`${baseUrl}/responses`, {
           method: 'POST',
@@ -225,100 +271,166 @@ export function createOpenAiProvider(options: OpenAiProviderOptions): AiProvider
             Accept: stream ? 'text/event-stream' : 'application/json',
           },
           body: JSON.stringify(buildRequestBody(request, stream)),
-          ...(signal ? { signal } : {}),
+          signal: controller.signal,
         });
 
-      let response: Response;
-      try {
-        response = await send(true);
-      } catch (error) {
-        const aborted = error instanceof Error && error.name === 'AbortError';
-        yield {
-          type: 'error',
-          code: aborted ? 'cancelled' : 'network_error',
-          message: aborted ? 'Requête annulée.' : 'Impossible de joindre OpenAI (réseau indisponible).',
-          retryable: !aborted,
-        };
-        return;
-      }
-
-      if (!response.ok) {
-        const mapped = mapStatus(response.status);
-        let message = `OpenAI a refusé la requête (HTTP ${response.status}).`;
-        try {
-          const body = (await response.json()) as { error?: { message?: string } };
-          if (body.error?.message) message = body.error.message;
-        } catch {
-          // Body is not JSON; keep the generic message.
-        }
-        yield { type: 'error', code: mapped.code, message: redactSecrets(message), retryable: mapped.retryable };
-        return;
-      }
-
-      const body = response.body as ReadableStream<Uint8Array> | null;
-      const canStream = Boolean(body && typeof (body as { getReader?: unknown }).getReader === 'function');
-
-      if (!canStream) {
-        // No streaming support in this fetch implementation: single-shot request.
-        try {
-          const payload = (await response.json()) as Record<string, unknown>;
-          for (const event of parseNonStreamingResponse(payload, state)) yield event;
-          for (const call of state.calls.values()) {
-            yield { type: 'function_call', callId: call.callId, name: call.name, arguments: call.arguments };
-          }
-          yield { type: 'completed', responseId: state.responseId, ...(state.usage ? { usage: state.usage } : {}) };
-        } catch (error) {
-          yield {
+      const abortEvent = (): ProviderEvent => {
+        if (timedOut) {
+          return {
             type: 'error',
-            code: 'stream_interrupted',
-            message: error instanceof Error ? error.message : 'Réponse illisible.',
+            code: 'timeout',
+            message: `Aucune réponse d’OpenAI après ${Math.round(timeoutMs / 1000)} s.`,
             retryable: true,
           };
         }
-        return;
-      }
-
-      const reader = body!.getReader();
-      const decoder = new TextDecoder();
-      const parse = createSseParser();
-      let failed = false;
+        return { type: 'error', code: 'cancelled', message: 'Requête annulée.', retryable: false };
+      };
 
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          for (const message of parse(chunk)) {
-            let payload: Record<string, unknown>;
-            try {
-              payload = JSON.parse(message.data) as Record<string, unknown>;
-            } catch {
-              continue;
+        if (signal?.aborted) {
+          yield { type: 'error', code: 'cancelled', message: 'Requête annulée.', retryable: false };
+          return;
+        }
+
+        let response: Response;
+        try {
+          response = await send(true);
+        } catch (error) {
+          const aborted = controller.signal.aborted || (error instanceof Error && error.name === 'AbortError');
+          if (aborted) {
+            yield abortEvent();
+            return;
+          }
+          yield {
+            type: 'error',
+            code: 'network_error',
+            message: 'Impossible de joindre OpenAI (réseau indisponible).',
+            retryable: true,
+          };
+          return;
+        }
+
+        if (!response.ok) {
+          const mapped = mapStatus(response.status);
+          let message = `OpenAI a refusé la requête (HTTP ${response.status}).`;
+          let code = mapped.code;
+          let retryable = mapped.retryable;
+          try {
+            const body = (await response.json()) as { error?: { message?: string; code?: string; type?: string } };
+            if (body.error?.message) message = body.error.message;
+            if (response.status === 429 && body.error?.code === 'insufficient_quota') {
+              code = 'quota_exceeded';
+              retryable = false;
             }
-            for (const event of handleStreamEvent(message.event, payload, state)) {
-              if (event.type === 'error') failed = true;
-              yield event;
+          } catch {
+            // Body is not JSON; keep the generic message.
+          }
+          yield { type: 'error', code, message: redactSecrets(message), retryable };
+          return;
+        }
+
+        const body = response.body as ReadableStream<Uint8Array> | null;
+        const canStream = Boolean(body && typeof (body as { getReader?: unknown }).getReader === 'function');
+
+        if (!canStream) {
+          // The request asked for SSE; without a readable body it must be replayed as a
+          // plain JSON request, otherwise `response.json()` would parse an SSE stream.
+          let payload: Record<string, unknown>;
+          try {
+            const plain = await send(false);
+            if (!plain.ok) {
+              const mapped = mapStatus(plain.status);
+              yield {
+                type: 'error',
+                code: mapped.code,
+                message: `OpenAI a refusé la requête (HTTP ${plain.status}).`,
+                retryable: mapped.retryable,
+              };
+              return;
+            }
+            payload = (await plain.json()) as Record<string, unknown>;
+          } catch (error) {
+            const aborted = controller.signal.aborted || (error instanceof Error && error.name === 'AbortError');
+            if (aborted) {
+              yield abortEvent();
+              return;
+            }
+            yield {
+              type: 'error',
+              code: 'stream_interrupted',
+              message: 'Réponse non-streaming illisible.',
+              retryable: true,
+            };
+            return;
+          }
+          for (const event of parseNonStreamingResponse(payload, state)) yield event;
+          for (const call of dedupeCalls(state)) {
+            yield { type: 'function_call', callId: call.callId, name: call.name, arguments: call.arguments };
+          }
+          yield { type: 'completed', responseId: state.responseId, ...(state.usage ? { usage: state.usage } : {}) };
+          return;
+        }
+
+        const reader = body!.getReader();
+        const decoder = new TextDecoder();
+        const parse = createSseParser();
+        let failed = false;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            for (const message of parse(chunk)) {
+              let payload: Record<string, unknown>;
+              try {
+                payload = JSON.parse(message.data) as Record<string, unknown>;
+              } catch {
+                continue;
+              }
+              for (const event of handleStreamEvent(message.event, payload, state)) {
+                if (event.type === 'error') failed = true;
+                yield event;
+              }
             }
           }
+        } catch (error) {
+        const aborted = controller.signal.aborted || (error instanceof Error && error.name === 'AbortError');
+        if (aborted) {
+          yield abortEvent();
+          return;
         }
-      } catch (error) {
-        const aborted = error instanceof Error && error.name === 'AbortError';
         yield {
           type: 'error',
-          code: aborted ? 'cancelled' : 'stream_interrupted',
-          message: aborted ? 'Requête annulée.' : 'Le flux de réponse a été interrompu.',
-          retryable: !aborted,
+          code: 'stream_interrupted',
+          message: 'Le flux de réponse a été interrompu.',
+          retryable: true,
         };
         return;
       }
 
-      if (failed) return;
+        if (failed) return;
 
-      for (const call of state.calls.values()) {
-        if (!call.name) continue;
-        yield { type: 'function_call', callId: call.callId, name: call.name, arguments: call.arguments || '{}' };
+        for (const call of dedupeCalls(state)) {
+          yield { type: 'function_call', callId: call.callId, name: call.name, arguments: call.arguments || '{}' };
+        }
+        yield { type: 'completed', responseId: state.responseId, ...(state.usage ? { usage: state.usage } : {}) };
+      } finally {
+        release();
       }
-      yield { type: 'completed', responseId: state.responseId, ...(state.usage ? { usage: state.usage } : {}) };
     },
   };
+}
+
+/**
+ * One provider call per `call_id`. Argument deltas can create an entry before the
+ * call id is known, and `output_item.done` can repeat the same call.
+ */
+function dedupeCalls(state: StreamState): PendingCall[] {
+  const byCallId = new Map<string, PendingCall>();
+  for (const call of state.calls.values()) {
+    if (!call.name || !call.callId) continue;
+    byCallId.set(call.callId, call);
+  }
+  return [...byCallId.values()];
 }

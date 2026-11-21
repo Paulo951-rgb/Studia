@@ -646,12 +646,19 @@ export function createToolRunner({ repos, accountId, now = () => new Date() }: T
       try {
         const data = await handler(args);
         const serialized = JSON.stringify(data);
-        return {
-          ok: true,
-          data: serialized.length > TOOL_LIMITS.maxToolOutputChars
-            ? `${serialized.slice(0, TOOL_LIMITS.maxToolOutputChars)}… [sortie tronquée]`
-            : serialized,
-        };
+        if (serialized.length <= TOOL_LIMITS.maxToolOutputChars) return { ok: true, data: serialized };
+        // Cutting a JSON string in the middle would hand the model unparsable output,
+        // so the truncation is wrapped in a valid envelope. The preview shrinks until
+        // the escaped envelope itself fits the budget.
+        const reason = `Sortie dépassant ${TOOL_LIMITS.maxToolOutputChars} caractères.`;
+        const envelope = (preview: string) => JSON.stringify({ truncated: true, reason, preview });
+        let preview = serialized.slice(0, TOOL_LIMITS.maxToolOutputChars);
+        let output = envelope(preview);
+        while (output.length > TOOL_LIMITS.maxToolOutputChars && preview.length > 0) {
+          preview = preview.slice(0, Math.floor(preview.length * 0.8));
+          output = envelope(preview);
+        }
+        return { ok: true, data: output };
       } catch (error) {
         return {
           ok: false,

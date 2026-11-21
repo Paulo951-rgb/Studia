@@ -171,3 +171,29 @@ test('an unknown tool name is rejected', async () => {
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.error.code, 'TOOL_UNKNOWN');
 });
+
+test('an oversized tool output is truncated inside valid JSON', async () => {
+  const repos = await createTestRepositories();
+  await seedSchool(repos);
+  const longComment = 'Remarque détaillée du professeur. '.repeat(10);
+  const grades = Array.from({ length: 40 }, (_, index) =>
+    grade({
+      id: `gra_bulk_${index}`,
+      nativeId: `GB${index}`,
+      valuePoints: 12,
+      comment: longComment,
+      commentOnGrade: longComment,
+    }),
+  );
+  await repos.writer.saveGrades(ACCOUNT_ID, period.id, grades, false);
+
+  const runner = createToolRunner({ repos, accountId: ACCOUNT_ID });
+  const result = await runner.run('get_grades', parseToolArguments('get_grades', JSON.stringify({ limit: 50 })));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  const parsed = JSON.parse(result.data) as { truncated?: boolean; preview?: string };
+  assert.equal(parsed.truncated, true);
+  assert.ok((parsed.preview ?? '').length > 0);
+  assert.ok(result.data.length <= TOOL_LIMITS.maxToolOutputChars);
+});
