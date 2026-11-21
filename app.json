@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Scolary",
+    "slug": "scolary",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "scolary",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.scolary.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scanner le QR code de connexion PRONOTE de l'établissement.",
+        "NSFaceIDUsageDescription": "Déverrouiller l'application et protéger l'accès aux données scolaires locales.",
+        "NSPhotoLibraryAddUsageDescription": "Enregistrer une pièce jointe exportée depuis l'application."
+      }
+    },
+    "android": {
+      "package": "app.scolary.mobile",
+      "permissions": ["INTERNET", "CAMERA", "USE_BIOMETRIC", "USE_FINGERPRINT"],
+      "adaptiveIcon": {
+        "backgroundColor": "#101418",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#101418",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": true
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Déverrouiller l'application et protéger l'accès aux données scolaires locales."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scanner le QR code de connexion PRONOTE de l'établissement.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-background-task",
+      "expo-dev-client"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

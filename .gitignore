@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+dist/
+.tmp-test/
+web-build/
+expo-env.d.ts
+*.log
+.DS_Store
+android/
+ios/
+coverage/
