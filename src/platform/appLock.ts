@@ -38,7 +38,7 @@ export async function unlockWithDevice(): Promise<UnlockResult> {
 
   try {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Déverrouiller Scolary',
+      promptMessage: 'Déverrouiller Studia',
       cancelLabel: 'Annuler',
       disableDeviceFallback: false,
     });

@@ -76,7 +76,7 @@ export default function PrivacyScreen() {
       <Card style={{ gap: spacing.sm }}>
         <AppText variant="heading">Aucun serveur éditeur</AppText>
         <Muted>
-          Scolary n’a ni backend, ni compte cloud, ni base centrale. Les données scolaires restent dans une base SQLite chiffrée
+          Studia n’a ni backend, ni compte cloud, ni base centrale. Les données scolaires restent dans une base SQLite chiffrée
           sur ce téléphone. Seuls deux destinataires externes existent, et seulement à votre demande : votre établissement
           (PRONOTE) et OpenAI (si vous activez l’assistant).
         </Muted>

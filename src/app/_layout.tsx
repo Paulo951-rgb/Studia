@@ -148,7 +148,7 @@ export default function RootLayout() {
             gap: 12,
           }}
         >
-          <AppText variant="title">Scolary est verrouillé</AppText>
+          <AppText variant="title">Studia est verrouillé</AppText>
           <AppText variant="body" color="textMuted">
             Vos notes, messages et conversations restent sur ce téléphone. Déverrouillez pour les consulter.
           </AppText>

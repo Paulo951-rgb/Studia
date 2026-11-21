@@ -76,7 +76,7 @@ export async function openExpoDatabase({ name, key }: ExpoDatabaseOptions): Prom
 }
 
 export async function isEncryptionAvailable(): Promise<boolean> {
-  const db = await SQLite.openDatabaseAsync('scolary-probe');
+  const db = await SQLite.openDatabaseAsync('studia-probe');
   try {
     const cipher = await db.getFirstAsync<{ cipher_version: string }>('PRAGMA cipher_version');
     return Boolean(cipher?.cipher_version);

@@ -22,7 +22,7 @@ export default function AboutScreen() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl }}>
       <Card style={{ gap: spacing.xs }}>
-        <AppText variant="title">Scolary</AppText>
+        <AppText variant="title">Studia</AppText>
         <Muted>Version 0.1.0 · application locale Android et iOS</Muted>
         <Muted>
           Assistant conversationnel adossé à PRONOTE. Aucun serveur éditeur, aucune base centrale, aucune télémétrie.
@@ -69,7 +69,7 @@ export default function AboutScreen() {
       </Card>
 
       <Muted style={{ color: palette.textFaint, textAlign: 'center' }}>
-        Scolary n’est pas affilié à Index Education. PRONOTE est une marque de son propriétaire.
+        Studia n’est pas affilié à Index Education. PRONOTE est une marque de son propriétaire.
       </Muted>
     </ScrollView>
   );

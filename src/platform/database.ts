@@ -6,7 +6,7 @@ import { getOrCreateDatabaseKey } from '@/platform/secureStore';
 let repositories: Repositories | null = null;
 let database: SqlDatabase | null = null;
 
-export const DATABASE_NAME = 'scolary.db';
+export const DATABASE_NAME = 'studia.db';
 
 /**
  * Opens the encrypted database once per app process.

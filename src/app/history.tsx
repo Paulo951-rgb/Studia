@@ -82,7 +82,7 @@ export default function HistoryScreen() {
         ))}
       </Card>
       <Muted style={{ color: palette.textFaint }}>
-        Les conversations ne sont jamais envoyées à un serveur Scolary : il n’en existe aucun. OpenAI reçoit uniquement les
+        Les conversations ne sont jamais envoyées à un serveur Studia : il n’en existe aucun. OpenAI reçoit uniquement les
         messages nécessaires à chaque réponse, avec `store: false`.
       </Muted>
     </ScrollView>

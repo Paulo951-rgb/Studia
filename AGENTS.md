@@ -4,7 +4,7 @@ Mémoire du dépôt pour les sessions futures.
 
 ## Projet
 
-Scolary : application Expo/React Native (SDK 58, RN 0.88, React 19) qui combine un
+Studia : application Expo/React Native (SDK 58, RN 0.88, React 19) qui combine un
 assistant OpenAI et un connecteur PRONOTE (`@blockshub/pawnote-lts`). Local First,
 aucun backend. Licence GPL-3.0-or-later (imposée par Pawnote).
 

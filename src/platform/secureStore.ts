@@ -6,11 +6,11 @@ import * as Crypto from 'expo-crypto';
  * Nothing secret is ever written to SQLite, to logs, or to the bundle.
  */
 const KEYS = {
-  dbKey: 'scolary.db.key',
-  openaiKey: 'scolary.openai.key',
-  pronoteToken: (accountId: string) => `scolary.pronote.token.${accountId}`,
-  pronoteDevice: (accountId: string) => `scolary.pronote.device.${accountId}`,
-  appLock: 'scolary.app.lock',
+  dbKey: 'studia.db.key',
+  openaiKey: 'studia.openai.key',
+  pronoteToken: (accountId: string) => `studia.pronote.token.${accountId}`,
+  pronoteDevice: (accountId: string) => `studia.pronote.device.${accountId}`,
+  appLock: 'studia.app.lock',
 } as const;
 
 const OPTIONS: SecureStore.SecureStoreOptions = {

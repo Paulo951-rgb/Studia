@@ -23,7 +23,7 @@ export type ConnectResult = {
 };
 
 function secretRefFor(accountId: string): string {
-  return `scolary.pronote.token.${accountId}`;
+  return `studia.pronote.token.${accountId}`;
 }
 
 /**

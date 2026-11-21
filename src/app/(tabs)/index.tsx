@@ -73,7 +73,7 @@ export default function ChatScreen() {
           </AppText>
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <AppText variant="heading">Scolary</AppText>
+          <AppText variant="heading">Studia</AppText>
           <Muted numberOfLines={1}>
             {account
               ? `${account.studentName ?? account.displayName} · ${account.className ?? account.establishmentName ?? ''}`

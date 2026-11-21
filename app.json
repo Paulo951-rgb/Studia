@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Scolary",
-    "slug": "scolary",
+    "name": "Studia",
+    "slug": "studia",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "scolary",
+    "scheme": "studia",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.scolary.mobile",
+      "bundleIdentifier": "app.studia.mobile",
       "infoPlist": {
         "NSCameraUsageDescription": "Scanner le QR code de connexion PRONOTE de l'établissement.",
         "NSFaceIDUsageDescription": "Déverrouiller l'application et protéger l'accès aux données scolaires locales.",
@@ -18,7 +18,7 @@
       }
     },
     "android": {
-      "package": "app.scolary.mobile",
+      "package": "app.studia.mobile",
       "permissions": ["INTERNET", "CAMERA", "USE_BIOMETRIC", "USE_FINGERPRINT"],
       "adaptiveIcon": {
         "backgroundColor": "#101418",

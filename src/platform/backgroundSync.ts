@@ -3,7 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 import { getRepositories } from '@/platform/database';
 import { syncAccount } from '@/providers/pronote/service';
 
-export const BACKGROUND_SYNC_TASK = 'scolary-background-sync';
+export const BACKGROUND_SYNC_TASK = 'studia-background-sync';
 export const BACKGROUND_SYNC_SETTING = 'sync.background.enabled';
 
 /**

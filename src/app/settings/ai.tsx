@@ -60,7 +60,7 @@ export default function AiSettingsScreen() {
       <Banner
         tone="warning"
         title="Votre clé, vos coûts"
-        description="Scolary n’embarque aucune clé commune. Vous utilisez votre propre clé API OpenAI, facturée par OpenAI. Un abonnement ChatGPT Plus ne donne pas accès à l’API."
+        description="Studia n’embarque aucune clé commune. Vous utilisez votre propre clé API OpenAI, facturée par OpenAI. Un abonnement ChatGPT Plus ne donne pas accès à l’API."
       />
 
       <Card style={{ gap: spacing.md }}>

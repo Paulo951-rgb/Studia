@@ -74,7 +74,7 @@ L'application est destinée à des élèves, souvent mineurs. En conséquence :
 - Base chiffrée ; refus de démarrer si SQLCipher est absent.
 - Secrets uniquement dans le stockage sécurisé de l'OS.
 - Verrouillage biométrique optionnel : l'empreinte ou le visage sont vérifiés par le
-  système (Android BiometricPrompt / iOS LocalAuthentication). Scolary ne reçoit, ne
+  système (Android BiometricPrompt / iOS LocalAuthentication). Studia ne reçoit, ne
   stocke ni ne transmet aucune donnée biométrique ; elle ne reçoit qu'une réponse
   oui/non. Le verrou se referme dès que l'application passe en arrière-plan.
 - Aucune télémétrie : les compteurs de tokens et le coût estimé restent dans la base

@@ -50,7 +50,7 @@ export default function SettingsTab() {
       </Card>
 
       <Muted style={{ color: palette.textFaint, textAlign: 'center' }}>
-        Scolary 0.1.0 · application locale, sans serveur éditeur
+        Studia 0.1.0 · application locale, sans serveur éditeur
       </Muted>
       <View style={{ height: spacing.md }} />
     </ScrollView>

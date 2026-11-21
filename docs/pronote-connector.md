@@ -67,7 +67,7 @@ l'établissement l'autorise.
 ## 4. Cycle de vie de la session
 
 1. `connectPronote` résout l'URL, ouvre une session Pawnote et stocke le jeton dans
-   SecureStore (`scolary.pronote.token.<accountId>`).
+   SecureStore (`studia.pronote.token.<accountId>`).
 2. Chaque synchronisation appelle `resumePronoteSessionOnce`, qui réutilise le jeton
    existant (`loginToken`) ; le renouvellement est sérialisé pour éviter deux
    authentifications concurrentes.

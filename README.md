@@ -1,4 +1,4 @@
-# Scolary
+# Studia
 
 Application mobile (Android + iOS) qui réunit un assistant conversationnel et les données
 scolaires PRONOTE. Tout s'exécute sur le téléphone : aucune infrastructure serveur à
