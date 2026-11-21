@@ -7,6 +7,7 @@ import { TOOLS } from '@/core/ai/tools';
 import { SYSTEM_INSTRUCTIONS, sanitizeUntrustedText } from '@/core/ai/prompt';
 import { getOpenAiKey } from '@/platform/secureStore';
 import { estimateCostUsd } from '@/core/ai/cost';
+import { checkAiGate } from '@/core/ai/gate';
 import { makeId } from '@/core/util/ids';
 import type { AiMemory, ChatMessage } from '@/core/domain/types';
 
@@ -92,12 +93,34 @@ export async function sendChatTurn(options: SendTurnOptions): Promise<SendTurnRe
   const consent = await hasAiConsent(repos);
   const apiKey = await getOpenAiKey();
 
-  if (!consent) {
-    return { assistantMessageId, text: '', errorCode: 'consent_required', requiresConsent: true, requiresApiKey: !apiKey };
+  // The question is stored before the gate: a missing consent or key must not make
+  // what the user typed disappear from the conversation.
+  const userMessage: ChatMessage = {
+    id: makeId('cm', conversationId, 'user', String(Date.now()), Math.random().toString(36).slice(2, 8)),
+    conversationId,
+    role: 'user',
+    contentText: text,
+    toolCalls: null,
+    toolCallId: null,
+    toolName: null,
+    status: 'complete',
+    errorCode: null,
+    createdAt: new Date().toISOString(),
+  };
+  await repos.chat.addMessage(userMessage);
+  await repos.chat.touchConversation(conversationId);
+
+  const gate = checkAiGate({ hasConsent: consent, hasApiKey: apiKey !== null });
+  if (gate !== null) {
+    return {
+      assistantMessageId,
+      text: '',
+      errorCode: gate,
+      requiresConsent: gate === 'consent_required',
+      requiresApiKey: gate === 'missing_api_key',
+    };
   }
-  if (!apiKey) {
-    return { assistantMessageId, text: '', errorCode: 'missing_api_key', requiresConsent: false, requiresApiKey: true };
-  }
+  if (apiKey === null) throw new Error('clé API absente après contrôle');
 
   const conversation = await repos.chat.getConversation(conversationId);
   const historyMessages = await repos.chat.listMessages(conversationId, 60);
@@ -114,21 +137,6 @@ export async function sendChatTurn(options: SendTurnOptions): Promise<SendTurnRe
 
   const provider = createOpenAiProvider({ apiKey, fetchImpl: expoFetch as unknown as typeof fetch });
   const runner = createToolRunner({ repos, accountId: accountId ?? '' });
-
-  const userMessage: ChatMessage = {
-    id: makeId('cm', conversationId, 'user', String(Date.now()), Math.random().toString(36).slice(2, 8)),
-    conversationId,
-    role: 'user',
-    contentText: text,
-    toolCalls: null,
-    toolCallId: null,
-    toolName: null,
-    status: 'complete',
-    errorCode: null,
-    createdAt: new Date().toISOString(),
-  };
-  await repos.chat.addMessage(userMessage);
-  await repos.chat.touchConversation(conversationId);
 
   const model = conversation?.model ?? (await getModel(repos));
 

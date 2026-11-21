@@ -165,28 +165,42 @@ export const useAppStore = create<AppState>((set, get) => ({
       ],
     });
 
-    const result = await sendChatTurn({
-      repos,
-      accountId: get().activeAccountId,
-      conversationId,
-      text,
-      signal: controller.signal,
-      onTextDelta: (delta) => set({ streamingText: get().streamingText + delta }),
-      onToolStart: (call) => set({ toolActivity: call.name }),
-      onToolEnd: () => set({ toolActivity: null }),
-    });
+    try {
+      const result = await sendChatTurn({
+        repos,
+        accountId: get().activeAccountId,
+        conversationId,
+        text,
+        signal: controller.signal,
+        onTextDelta: (delta) => set({ streamingText: get().streamingText + delta }),
+        onToolStart: (call) => set({ toolActivity: call.name }),
+        onToolEnd: () => set({ toolActivity: null }),
+      });
 
-    currentController = null;
-    const messages = await repos.chat.listMessages(conversationId, 200);
-    set({
-      streaming: false,
-      streamingText: '',
-      toolActivity: null,
-      messages,
-      lastError: result.errorCode,
-    });
+      currentController = null;
+      const messages = await repos.chat.listMessages(conversationId, 200);
+      set({
+        streaming: false,
+        streamingText: '',
+        toolActivity: null,
+        messages,
+        lastError: result.errorCode,
+      });
 
-    if (result.requiresConsent) set({ lastError: 'consent_required' });
+      if (result.requiresConsent) set({ lastError: 'consent_required' });
+    } catch (error) {
+      // A crash in the provider or the storage layer must not freeze the composer in
+      // "streaming" state with a stop button that can no longer stop anything.
+      currentController = null;
+      const messages = await repos.chat.listMessages(conversationId, 200).catch(() => get().messages);
+      set({
+        streaming: false,
+        streamingText: '',
+        toolActivity: null,
+        messages,
+        lastError: error instanceof Error ? error.message : 'unknown',
+      });
+    }
   },
 
   async regenerate() {
@@ -217,16 +231,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!repos || !activeAccountId) return;
     if (get().syncRunning) return;
     set({ syncRunning: true, lastError: null });
-    const summary = await syncAccount(repos, activeAccountId, { kind, ...(only ? { only } : {}) });
-    const accounts = await repos.accounts.list();
-    const account = accounts.find((entry) => entry.id === activeAccountId);
-    set({
-      syncRunning: false,
-      lastSyncSummary: summary,
-      lastSyncAt: account?.lastSyncAt ?? null,
-      accounts,
-      lastError: summary.errorCode,
-    });
+    try {
+      const summary = await syncAccount(repos, activeAccountId, { kind, ...(only ? { only } : {}) });
+      const accounts = await repos.accounts.list();
+      const account = accounts.find((entry) => entry.id === activeAccountId);
+      set({
+        syncRunning: false,
+        lastSyncSummary: summary,
+        lastSyncAt: account?.lastSyncAt ?? null,
+        accounts,
+        lastError: summary.errorCode,
+      });
+    } catch (error) {
+      // Never leave the refresh control spinning forever on an unexpected failure.
+      set({
+        syncRunning: false,
+        lastError: error instanceof Error ? error.message : 'unknown',
+      });
+    }
   },
 
   clearError() {

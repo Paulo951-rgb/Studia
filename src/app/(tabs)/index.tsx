@@ -40,7 +40,6 @@ export default function ChatScreen() {
 
   const [input, setInput] = useState('');
   const [consent, setConsent] = useState<boolean | null>(null);
-  const [attachmentNotice, setAttachmentNotice] = useState(false);
 
   const account = accounts.find((entry) => entry.id === activeAccountId) ?? null;
 
@@ -222,17 +221,6 @@ export default function ChatScreen() {
         ) : null}
       </ScrollView>
 
-      {attachmentNotice ? (
-        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
-          <Banner
-            tone="warning"
-            title="Pièces jointes non disponibles"
-            description="L'envoi de fichiers à l'API Responses n'est pas implémenté dans cette version : aucun fichier n'est transmis. Utilisez les outils scolaires (documents, messages) pour que l'assistant lise les métadonnées déjà synchronisées."
-            action={{ label: 'Fermer', onPress: () => setAttachmentNotice(false) }}
-          />
-        </View>
-      ) : null}
-
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View
           style={{
@@ -257,13 +245,6 @@ export default function ChatScreen() {
               padding: spacing.sm,
             }}
           >
-            <Pressable
-              onPress={() => setAttachmentNotice(true)}
-              style={{ paddingHorizontal: 6, paddingBottom: 8 }}
-              accessibilityLabel="Joindre un fichier"
-            >
-              <AppText style={{ color: palette.textMuted, fontSize: 18 }}>＋</AppText>
-            </Pressable>
             <TextInput
               value={input}
               onChangeText={setInput}
