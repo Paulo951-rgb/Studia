@@ -15,6 +15,8 @@ import {
   setModel,
 } from '@/providers/ai/service';
 import { deleteOpenAiKey, getOpenAiKey, setOpenAiKey } from '@/platform/secureStore';
+import { formatUsd } from '@/core/ai/cost';
+import type { AiUsageSummary } from '@/core/domain/types';
 
 export default function AiSettingsScreen() {
   const { palette } = usePalette();
@@ -25,6 +27,7 @@ export default function AiSettingsScreen() {
   const [model, setModelState] = useState(DEFAULT_MODEL);
   const [memory, setMemory] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [usage, setUsage] = useState<AiUsageSummary | null>(null);
 
   useEffect(() => {
     void getOpenAiKey().then((key) => setHasKey(Boolean(key)));
@@ -32,6 +35,13 @@ export default function AiSettingsScreen() {
     void hasAiConsent(repos).then(setConsent);
     void getModel(repos).then(setModelState);
     void memoryEnabled(repos).then(setMemory);
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    void repos.usage
+      .summary({ accountId: null, since: monthStart.toISOString() })
+      .then(setUsage)
+      .catch(() => setUsage(null));
   }, [repos]);
 
   const saveKey = async () => {
@@ -141,6 +151,26 @@ export default function AiSettingsScreen() {
           ))}
         </View>
         <Muted>Identifiant envoyé : {model}</Muted>
+      </Card>
+
+      <Card style={{ gap: spacing.sm }}>
+        <AppText variant="heading">Consommation ce mois-ci</AppText>
+        <Row title="Requêtes" right={<Muted>{usage ? String(usage.requests) : '—'}</Muted>} />
+        <Row
+          title="Tokens"
+          subtitle="entrée / sortie"
+          right={<Muted>{usage ? `${usage.inputTokens} / ${usage.outputTokens}` : '—'}</Muted>}
+        />
+        <Row title="Coût estimé" right={<Muted>{usage ? formatUsd(usage.estimatedCostUsd) : '—'}</Muted>} />
+        {usage && usage.unknownCostRequests > 0 ? (
+          <Muted>
+            {usage.unknownCostRequests} requête(s) sans estimation : le modèle n’est pas dans le barème local.
+          </Muted>
+        ) : null}
+        <Muted style={{ color: palette.textFaint }}>
+          Estimation calculée sur ce téléphone à partir d’un barème local indicatif, sans télémétrie. Seule la facturation
+          OpenAI fait foi ; consultez la page tarifaire officielle pour les prix à jour.
+        </Muted>
       </Card>
 
       <Card style={{ gap: spacing.sm }}>

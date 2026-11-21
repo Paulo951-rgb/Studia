@@ -2,6 +2,7 @@ import type { Repositories } from '@/db';
 import type { SearchKind } from '@/db/repositories/search';
 import type { Grade, SchoolPeriod, Subject } from '@/core/domain/types';
 import { computeGradesAverage, computeOverallAverage, simulateGrade, formatAverage } from '@/core/school/averages';
+import { requiredGradeForTarget, subjectProgress, upcomingTests, weakSubjects } from '@/core/school/insights';
 import { TOOL_LIMITS, type ParsedToolArguments, type ToolName } from '@/core/ai/tools';
 
 export type ToolResult =
@@ -612,6 +613,132 @@ export function createToolRunner({ repos, accountId, now = () => new Date() }: T
         last_sync: latestSync
           ? { at: latestSync.finishedAt ?? latestSync.startedAt, status: latestSync.status, kind: latestSync.kind }
           : null,
+      };
+    },
+
+
+    async get_upcoming_tests(args) {
+      const { periods } = await loadContext();
+      const period = resolvePeriod(periods, null);
+      const days = args.days ?? 14;
+      const [evaluations, timetable] = await Promise.all([
+        repos.school.listEvaluations({ accountId, limit: 200, ...(period ? { periodId: period.id } : {}) }),
+        repos.school.listTimetable({
+          accountId,
+          from: now().toISOString(),
+          to: new Date(now().getTime() + days * 24 * 60 * 60 * 1000).toISOString(),
+          limit: 200,
+        }),
+      ]);
+      const tests = upcomingTests(evaluations, timetable, now(), days).slice(0, args.limit ?? TOOL_LIMITS.maxResults);
+      return {
+        type: 'calcul_exact',
+        source: 'évaluations et emploi du temps enregistrés',
+        window_days: days,
+        count: tests.length,
+        tests: tests.map((test) => ({
+          subject: test.subject,
+          title: fenceUntrusted(test.title),
+          date: test.date,
+          source: test.source,
+          coefficient: test.coefficient,
+          teacher: test.teacher,
+        })),
+        limitation:
+          "PRONOTE ne publie pas toujours la date des contrôles : un contrôle sans date connue n'apparaît pas ici.",
+      };
+    },
+
+    async get_subject_progress(args) {
+      const { periods, subjects } = await loadContext();
+      const filtered = args.subject ? subjects.filter((subject) => subject.name === args.subject) : subjects;
+      const averages = await repos.school.listAverages({ accountId });
+      const rows = subjectProgress(filtered, periods, averages);
+      return {
+        type: 'calcul_exact',
+        source: 'moyennes enregistrées, période par période',
+        count: rows.length,
+        subjects: rows.map((row) => ({
+          subject: row.subject,
+          points: row.points,
+          delta: row.delta,
+          trend: row.trend,
+        })),
+        disclaimer: "Les écarts comparent deux moyennes réelles ; ils ne prédisent pas la période suivante.",
+      };
+    },
+
+    async simulate_average_target(args) {
+      const { periods, subjects } = await loadContext();
+      const subject = resolveSubject(subjects, args.subject);
+      if (!subject) {
+        return { error: 'subject_not_found', message: `Matière inconnue : ${args.subject}` };
+      }
+      const period = resolvePeriod(periods, args.period);
+      const grades = await gradesFor(period, subject);
+      const target = args.target ?? 10;
+      const coefficient = args.coefficient ?? 1;
+      const result = requiredGradeForTarget(grades, target, coefficient);
+      return {
+        type: 'calcul_exact',
+        subject: subject.name,
+        period: period?.name ?? null,
+        target,
+        coefficient,
+        current_average: result.currentAverage,
+        counted_grades: result.countedGrades,
+        needed_grade: result.needed,
+        status: result.status,
+        method: 'note nécessaire = (cible × (somme des coefficients + coefficient) − points acquis) / coefficient',
+        disclaimer:
+          "Arithmétique sur les notes enregistrées, hors notes bonus et facultatives. Ce n'est pas une prévision de résultat.",
+      };
+    },
+
+    async get_weak_subjects(args) {
+      const { periods } = await loadContext();
+      const period = resolvePeriod(periods, args.period);
+      const allSubjects = await repos.school.listSubjects(accountId);
+      const inputs = [];
+      for (const entry of allSubjects) {
+        inputs.push({
+          subjectId: entry.id,
+          subjectName: entry.name,
+          grades: await gradesFor(period, entry),
+          subjectCoefficient: null,
+        });
+      }
+      const overall = computeOverallAverage(inputs);
+      const rows = overall.subjects
+        .filter((entry) => entry.average !== null)
+        .map((entry) => ({ subject: entry.subjectName, average: entry.average as number }));
+      const worst = new Map<string, string>();
+      for (const entry of allSubjects) {
+        const grades = await gradesFor(period, entry);
+        const lowest = [...grades]
+          .filter((grade) => grade.valuePoints !== null)
+          .sort((a, b) => (a.valuePoints ?? 0) - (b.valuePoints ?? 0))[0];
+        if (lowest) {
+          worst.set(entry.name, `${lowest.valuePoints}/${lowest.outOfPoints ?? 20} le ${lowest.gradedAt.slice(0, 10)}`);
+        }
+      }
+      const list = weakSubjects(
+        rows.map((row) => ({ ...row, worstGrade: worst.get(row.subject) ?? null })),
+        overall.value,
+        args.threshold ?? 1,
+        args.limit ?? 5,
+      );
+      return {
+        type: 'calcul_exact',
+        source: 'notes enregistrées',
+        period: period?.name ?? null,
+        overall_average: overall.value,
+        threshold: args.threshold ?? 1,
+        count: list.length,
+        subjects: list,
+        disclaimer: overall.isEstimate
+          ? 'Les coefficients de matière sont inconnus : la moyenne générale est une estimation.'
+          : "Calcul local à partir des coefficients disponibles ; il peut différer de l'arrondi officiel de PRONOTE.",
       };
     },
 

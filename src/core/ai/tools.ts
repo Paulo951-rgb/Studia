@@ -32,7 +32,11 @@ export type ToolName =
   | 'calculate_average'
   | 'simulate_grade'
   | 'get_school_summary'
-  | 'search_school_history';
+  | 'search_school_history'
+  | 'get_upcoming_tests'
+  | 'get_subject_progress'
+  | 'simulate_average_target'
+  | 'get_weak_subjects';
 
 export type ToolDefinition = {
   name: ToolName;
@@ -288,6 +292,64 @@ export const TOOLS: ToolDefinition[] = [
     parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
   {
+    name: 'get_upcoming_tests',
+    description:
+      "Renvoie les contrôles et évaluations à venir dans les N prochains jours, à partir des évaluations enregistrées et des cours marqués comme contrôle dans l'emploi du temps.",
+    parameters: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: 'Fenêtre en jours, de 1 à 60. Par défaut 14.' },
+        limit: { type: 'number', description: `Nombre maximum de résultats (1 à ${TOOL_LIMITS.maxResults}).` },
+      },
+      required: ['days', 'limit'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_subject_progress',
+    description:
+      "Renvoie, matière par matière, la moyenne de chaque période et l'écart entre les deux dernières périodes connues. Utile pour parler de progression sans inventer de tendance.",
+    parameters: {
+      type: 'object',
+      properties: {
+        subject: { ...nullable({ type: 'string' }), description: 'Filtre optionnel sur le nom de la matière.' },
+      },
+      required: ['subject'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'simulate_average_target',
+    description:
+      "Calcule la note nécessaire sur une prochaine évaluation, avec un coefficient donné, pour atteindre une moyenne cible dans une matière. Résultat arithmétique, pas une prédiction.",
+    parameters: {
+      type: 'object',
+      properties: {
+        subject: { type: 'string', description: 'Nom de la matière.' },
+        target: { type: 'number', description: 'Moyenne visée sur 20, entre 0 et 20.' },
+        coefficient: { ...nullable({ type: 'number' }), description: 'Coefficient de la future note, par défaut 1.' },
+        period: { ...nullable({ type: 'string' }), description: 'Période optionnelle ; la période courante est utilisée sinon.' },
+      },
+      required: ['subject', 'target', 'coefficient', 'period'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_weak_subjects',
+    description:
+      "Liste les matières dont la moyenne est nettement inférieure à la moyenne générale locale, avec la note la plus basse récente. Seuil et nombre de résultats paramétrables.",
+    parameters: {
+      type: 'object',
+      properties: {
+        threshold: { ...nullable({ type: 'number' }), description: 'Écart minimal en points sous la moyenne générale, par défaut 1.' },
+        period: { ...nullable({ type: 'string' }), description: 'Période optionnelle.' },
+        limit: { type: 'number', description: `Nombre maximum de matières (1 à 20).` },
+      },
+      required: ['threshold', 'period', 'limit'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'search_school_history',
     description:
       'Recherche plein texte dans tout l’historique scolaire local : messages, documents, devoirs, appréciations, actualités, bulletins.',
@@ -376,6 +438,9 @@ export type ParsedToolArguments = {
   out_of?: number | null;
   coefficient?: number | null;
   kinds?: string[] | null;
+  days?: number | null;
+  target?: number | null;
+  threshold?: number | null;
 };
 
 export function parseToolArguments(name: ToolName, raw: string): ParsedToolArguments {
@@ -467,6 +532,26 @@ export function parseToolArguments(name: ToolName, raw: string): ParsedToolArgum
         period: asString(args['period'], 'period'),
       };
     }
+    case 'get_upcoming_tests':
+      return {
+        days: asNumber(args['days'], 'days', 1, 60),
+        limit: asNumber(args['limit'], 'limit', 1, TOOL_LIMITS.maxResults),
+      };
+    case 'get_subject_progress':
+      return { subject: asString(args['subject'], 'subject') };
+    case 'simulate_average_target':
+      return {
+        subject: asString(args['subject'], 'subject') ?? raise('subject est obligatoire.'),
+        target: asNumber(args['target'], 'target', 0, 20) ?? raise('target est obligatoire.'),
+        coefficient: asNumber(args['coefficient'], 'coefficient', 0.1, 100),
+        period: asString(args['period'], 'period'),
+      };
+    case 'get_weak_subjects':
+      return {
+        threshold: asNumber(args['threshold'], 'threshold', 0, 20),
+        period: asString(args['period'], 'period'),
+        limit: asNumber(args['limit'], 'limit', 1, 20),
+      };
     case 'search_school_history':
       return {
         query: asString(args['query'], 'query') ?? raise('query est obligatoire.'),

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { TOOLS, TOOL_LIMITS, parseToolArguments, ToolArgumentError, type ToolName } from '@/core/ai/tools';
 import { normalizeUrl } from '@/core/util/ids';
 
-test('the 19 tools required by the specification are all declared', () => {
+test('the 19 required tools and the 4 derived views are all declared', () => {
   const expected: ToolName[] = [
     'get_student_profile',
     'get_grades',
@@ -25,10 +25,20 @@ test('the 19 tools required by the specification are all declared', () => {
     'get_school_summary',
     'search_school_history',
   ];
-  assert.equal(TOOLS.length, 19);
+  const derived: ToolName[] = [
+    'get_upcoming_tests',
+    'get_subject_progress',
+    'simulate_average_target',
+    'get_weak_subjects',
+  ];
+  assert.equal(TOOLS.length, 23);
+  assert.deepEqual(
+    TOOLS.map((tool) => tool.name).filter((name) => derived.includes(name)).sort(),
+    [...derived].sort(),
+  );
   assert.deepEqual(
     TOOLS.map((tool) => tool.name).sort(),
-    [...expected].sort(),
+    [...expected, ...derived].sort(),
   );
 });
 

@@ -40,6 +40,10 @@ bornes, longueur maximale (200 caractères par chaîne), clés inconnues rejeté
 | `simulate_grade` | `subject`, `points`, `out_of?`, `coefficient?`, `period?` | simulation explicitement étiquetée |
 | `get_school_summary` | `period?` | synthèse chiffrée (moyennes, devoirs, absences) |
 | `search_school_history` | `query`, `kinds?`, `limit?` | recherche transversale (notes, messages, documents, chat, mémoire) |
+| `get_upcoming_tests` | `days?` (1–60), `limit?` | contrôles à venir : évaluations datées + cours marqués comme contrôle |
+| `get_subject_progress` | `subject?` | moyenne par période et écart entre les deux dernières périodes |
+| `simulate_average_target` | `subject`, `target`, `coefficient?`, `period?` | note nécessaire pour atteindre une cible (arithmétique, pas une prévision) |
+| `get_weak_subjects` | `threshold?`, `period?`, `limit?` | matières sous la moyenne générale locale, avec la note la plus basse récente |
 
 ## Garde-fous
 
@@ -55,8 +59,12 @@ bornes, longueur maximale (200 caractères par chaîne), clés inconnues rejeté
    localement.
 5. **Séparation calcul/estimation.** `calculate_average` renvoie `type: 'calcul_exact'` ou
    `'estimation'` et explique la méthode ; `simulate_grade` renvoie `type: 'simulation'` et
-   un avertissement.
-6. **Consentement.** Aucun envoi à OpenAI avant acceptation explicite (paramètre
+   un avertissement. `simulate_average_target`, `get_subject_progress` et
+   `get_weak_subjects` renvoient `type: 'calcul_exact'` : ce sont des calculs sur des notes
+   réelles, jamais des prévisions de résultat.
+6. **Dates de contrôle.** `get_upcoming_tests` ne peut lister que ce que PRONOTE expose :
+   une évaluation sans date publiée n'apparaît pas. La réponse le dit explicitement.
+7. **Consentement.** Aucun envoi à OpenAI avant acceptation explicite (paramètre
    `ai.consent.accepted_at`). Sans clé API ou sans consentement, l'application répond
    localement par un message d'explication, sans appel réseau.
 

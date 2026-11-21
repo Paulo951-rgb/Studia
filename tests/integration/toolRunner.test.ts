@@ -12,8 +12,10 @@ import {
   discussion,
   document,
   event,
+  french,
   grade,
   homework,
+  maths,
   message,
   news,
   period,
@@ -196,4 +198,94 @@ test('an oversized tool output is truncated inside valid JSON', async () => {
   assert.equal(parsed.truncated, true);
   assert.ok((parsed.preview ?? '').length > 0);
   assert.ok(result.data.length <= TOOL_LIMITS.maxToolOutputChars);
+});
+
+test('upcoming tests combine stored evaluations and timetable test lessons', async () => {
+  const repos = await seedAll();
+  await repos.writer.saveEvaluations(
+    ACCOUNT_ID,
+    [
+      {
+        id: 'eva_1',
+        accountId: ACCOUNT_ID,
+        nativeId: 'E1',
+        periodId: period.id,
+        subjectId: maths.id,
+        subjectName: maths.name,
+        name: 'Contrôle chapitre 4',
+        teacher: 'M. Bernard',
+        coefficient: 2,
+        description: 'Évaluation sur les suites',
+        evaluatedAt: '2026-03-10T08:00:00.000Z',
+        levels: [],
+        skills: [],
+        updatedAt: '2026-03-01T00:00:00.000Z',
+        syncedAt: '2026-03-01T00:00:00.000Z',
+      },
+    ],
+    period.id,
+    false,
+  );
+
+  const data = await run(repos, 'get_upcoming_tests', { days: 14, limit: 10 });
+  // The seeded timetable lesson is a test on 2026-03-03, before the runner's "now".
+  assert.equal(data.count, 1);
+  assert.equal(data.tests[0].source, 'evaluation');
+  assert.equal(data.tests[0].date, '2026-03-10T08:00:00.000Z');
+  assert.equal(data.tests[0].coefficient, 2);
+  assert.ok(data.limitation.includes('date des contrôles'));
+});
+
+test('subject progress and the needed mark use the stored grades only', async () => {
+  const repos = await seedAll();
+  const progress = await run(repos, 'get_subject_progress', { subject: null });
+  assert.equal(progress.count, 1);
+  assert.deepEqual(progress.subjects[0].points, [{ period: period.name, value: 13.5, source: 'pronote' }]);
+  assert.equal(progress.subjects[0].delta, null);
+  assert.equal(progress.subjects[0].trend, 'unknown');
+
+  const target = await run(repos, 'simulate_average_target', {
+    subject: maths.name,
+    target: 13,
+    coefficient: 1,
+    period: null,
+  });
+  assert.equal(target.current_average, 12);
+  assert.equal(target.needed_grade, 16);
+  assert.equal(target.status, 'possible');
+  assert.equal(target.type, 'calcul_exact');
+
+  const unknown = await run(repos, 'simulate_average_target', {
+    subject: 'Astronomie',
+    target: 13,
+    coefficient: 1,
+    period: null,
+  });
+  assert.equal(unknown.error, 'subject_not_found');
+});
+
+test('weak subjects compare each average with the local overall average', async () => {
+  const repos = await seedAll();
+  await repos.writer.saveGrades(
+    ACCOUNT_ID,
+    period.id,
+    [
+      grade({
+        id: 'gra_fr_1',
+        nativeId: 'GFR1',
+        valuePoints: 15,
+        coefficient: 1,
+        subjectId: french.id,
+        subjectName: french.name,
+      }),
+    ],
+    false,
+  );
+  const data = await run(repos, 'get_weak_subjects', { threshold: 1, period: null, limit: 5 });
+  // Maths (12) against an equal-weight overall of 13.5: 1.5 points below, so listed.
+  assert.equal(data.overall_average, 13.5);
+  assert.equal(data.count, 1);
+  assert.equal(data.subjects[0].subject, maths.name);
+  assert.equal(data.subjects[0].gapToOverall, -1.5);
+  assert.equal(data.subjects[0].worstGrade, '8/20 le 2025-10-01');
 });

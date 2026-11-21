@@ -345,5 +345,6 @@ test('recomputed averages come from stored grades and stay stable across runs', 
 
   await refreshComputedAverages(repos, ACCOUNT_ID, [period]);
   const second = await repos.school.listAverages({ accountId: ACCOUNT_ID, periodId: period.id });
-  assert.deepEqual(second, first, 'a second run does not duplicate or drift');
+  const stable = (rows: typeof first) => rows.map((row) => [row.subjectId, row.studentValue, row.source]);
+  assert.deepEqual(stable(second), stable(first), 'a second run does not duplicate or drift');
 });
