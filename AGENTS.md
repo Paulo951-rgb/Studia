@@ -44,9 +44,21 @@ SQLite : les dépôts tournent sur une vraie base en mémoire.
   de compte (`repos.accounts.remove`).
 - L'index chat doit être associé à `account_id` de la conversation, sinon la recherche
   filtrée par compte ne trouve rien.
+- `runSync({ only })` ajoute toujours `profile` et `periods` : les autres ressources
+  résolvent leur périmètre à travers elles. Ne pas retirer cette inclusion.
+- Les messages ne sont retéléchargés que si `messageCount`, `unreadCount` ou
+  `lastMessageAt` d'une discussion ont changé ; une discussion absente du cache est
+  toujours récupérée.
+- Le verrou (`platform/appLock.ts`) est un verrou d'affichage : il ne rechiffre rien. Le
+  réglage refuse de s'activer si la biométrie n'est pas configurée, pour ne pas enfermer
+  l'utilisateur dehors.
+- Les outils dérivés (`get_upcoming_tests`, `get_subject_progress`,
+  `simulate_average_target`, `get_weak_subjects`) vivent dans `core/school/insights.ts` et
+  doivent rester purs, donc testables sous Node.
 
 ## État
 
-- 86 tests passent, typecheck strict OK, bundles Android et iOS OK.
-- Non testé faute de moyens : connexion PRONOTE réelle, appels OpenAI réels, SQLCipher et
-  tâche de fond sur appareil. Voir `docs/build-and-release.md` §7.
+- 109 tests passent, typecheck strict OK, bundles Android et iOS OK.
+- Non testé faute de moyens : connexion PRONOTE réelle, appels OpenAI réels, SQLCipher,
+  verrou biométrique et tâche de fond sur appareil. Voir `docs/build-and-release.md` §7.
+- Constats de l'audit et leur traitement : `docs/audit.md` §7.

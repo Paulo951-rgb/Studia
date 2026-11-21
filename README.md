@@ -5,7 +5,7 @@ scolaires PRONOTE. Tout s'exécute sur le téléphone : aucune infrastructure se
 maintenir, aucune base centrale, aucune télémétrie.
 
 - **Assistant** : API OpenAI Responses, clé fournie par l'utilisateur, stockée dans le
-  keychain/keystore, Function Calling vers 19 outils locaux.
+  keychain/keystore, Function Calling vers 23 outils locaux, coût estimé sur l'appareil.
 - **PRONOTE** : connecteur TypeScript (`@blockshub/pawnote-lts`, Pawnote 1.6.4) exécuté dans
   l'application, sans relais.
 - **Base locale** : SQLite chiffrée (SQLCipher) + FTS5 pour la recherche, secrets dans
@@ -20,9 +20,10 @@ Ce dépôt ne contient que ce qui est démontrable. Vérifié à ce jour :
 | Élément | Statut |
 | --- | --- |
 | TypeScript strict (`tsc --noEmit` + config tests) | ✅ passe |
-| 86 tests automatisés (`npm test`) | ✅ passent |
+| 109 tests automatisés (`npm test`) | ✅ passent |
 | Bundle Metro Android et iOS (`expo export -p android` / `-p ios`) | ✅ se construisent |
 | Écran de chat, écrans École, réglages, connexion PRONOTE | ✅ implémentés |
+| Verrouillage biométrique (`expo-local-authentication`) | ⚠️ code et bundle OK, à valider sur appareil |
 | Connecteur PRONOTE contre un vrai établissement | ❌ **non testé** (aucun identifiant réel disponible) — test de contrat prêt : `npm run test:contract` |
 | Appels OpenAI réels | ❌ **non testés** (aucune clé API disponible) |
 | SQLCipher sur appareil | ❌ **non testé** (nécessite un development build) |
@@ -70,6 +71,11 @@ npm run ios           # idem sur iOS (macOS requis)
 | Recherche des remarques des professeurs | FTS5 local | outil `search_teacher_feedback`, École › Recherche |
 | Synthèse des messages | données PRONOTE + lecture IA | École › Messages, outils `search_messages` |
 | Planification des devoirs, fiches, QCM, flashcards, bilan hebdo | **généré par l'IA** à partir des données locales | École › Révisions et bilans |
+| Contrôles à venir | données PRONOTE (évaluations datées, cours « contrôle ») | outil `get_upcoming_tests` |
+| Progression par matière entre périodes | **calcul exact** sur les moyennes stockées | outil `get_subject_progress` |
+| Note nécessaire pour viser une moyenne | **calcul exact**, pas une prévision | outil `simulate_average_target` |
+| Matières les plus fragiles | **calcul exact** (écart à la moyenne générale locale) | outil `get_weak_subjects` |
+| Coût OpenAI estimé | barème local, indicatif, jamais envoyé | Réglages › Assistant |
 
 ## Ce que l'application ne fait pas
 

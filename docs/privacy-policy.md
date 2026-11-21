@@ -73,7 +73,12 @@ L'application est destinée à des élèves, souvent mineurs. En conséquence :
 - HTTPS obligatoire pour PRONOTE et OpenAI.
 - Base chiffrée ; refus de démarrer si SQLCipher est absent.
 - Secrets uniquement dans le stockage sécurisé de l'OS.
-- Verrouillage biométrique optionnel.
+- Verrouillage biométrique optionnel : l'empreinte ou le visage sont vérifiés par le
+  système (Android BiometricPrompt / iOS LocalAuthentication). Scolary ne reçoit, ne
+  stocke ni ne transmet aucune donnée biométrique ; elle ne reçoit qu'une réponse
+  oui/non. Le verrou se referme dès que l'application passe en arrière-plan.
+- Aucune télémétrie : les compteurs de tokens et le coût estimé restent dans la base
+  locale et ne sont envoyés à personne.
 - Validation stricte des entrées et des sorties d'outils.
 - Protection contre les injections de prompt (contenus PRONOTE traités comme données).
 

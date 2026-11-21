@@ -144,3 +144,30 @@ sécurité non tenue (P0-9) et la synchronisation (P1-1 à P1-3).
 
 Le plan de traitement suit cet ordre : P0 d'abord, puis P1 mesurables, chaque lot livré avec
 ses tests.
+
+## 7. Traitement des constats (état au 2026-11-21)
+
+Chaque lot a été livré avec ses tests ; `npm test` compte 109 tests, `tsc --noEmit` est
+propre et les bundles Metro Android et iOS se construisent.
+
+| Constat | Traitement | Vérification |
+| --- | --- | --- |
+| Fragments d'appels d'outils perdus si le flux est interrompu | clés par identifiant d'item | `tests/unit/openai-resilience.test.ts` |
+| Flux refusé par le réseau → requête sans réponse | rejeu en JSON non streamé | idem |
+| `insufficient_quota` classé en limite de débit | code `quota_exceeded` distinct | idem |
+| Aucun délai maximal sur les appels OpenAI | 120 s combinés au signal de l'appelant | idem |
+| Sortie d'outil tronquée au milieu d'une chaîne → JSON invalide | enveloppe JSON `truncated/preview` | `tests/integration/toolRunner.test.ts` |
+| Coût et consommation invisibles | table `ai_usage`, barème local, carte de réglages | migration v2, `src/core/ai/cost.ts` |
+| Écran `school/revision` non déclaré | enregistré dans la pile | `src/app/_layout.tsx` |
+| Devoirs impossibles à cocher localement, coche perdue à la synchro | coche locale + préservation | `schoolWrite.ts` |
+| Échec de synchro automatique bloquant le bouton d'actualisation | état toujours réinitialisé | `appStore.ts` |
+| Verrouillage biométrique annoncé mais absent | verrou réel au démarrage et au retour au premier plan | `platform/appLock.ts`, `_layout.tsx` |
+| Sync complète pour réessayer une seule ressource | option `only` + bouton « Réessayer » | `tests/integration/sync.test.ts` |
+| Un appel `fetchMessages` par conversation à chaque synchro | uniquement si les compteurs ont bougé | idem |
+| Recalcul des moyennes en N+1 | une requête par période | idem |
+
+Restent ouverts, sans solution honnête à ce jour :
+
+- vérification contre un établissement PRONOTE réel (identifiants indisponibles) ;
+- SQLCipher et biométrie sur appareil physique (development build requis) ;
+- notifications : seules des notifications locales planifiées sont possibles sans serveur.
