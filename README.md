@@ -1,17 +1,47 @@
 # Studia
 
-Application mobile (Android + iOS) qui réunit un assistant conversationnel et les données
-scolaires PRONOTE. Tout s'exécute sur le téléphone : aucune infrastructure serveur à
-maintenir, aucune base centrale, aucune télémétrie.
+Application mobile Android et iOS qui réunit un assistant conversationnel et vos données
+scolaires PRONOTE. Tout s'exécute sur le téléphone : aucun serveur à maintenir, aucune base
+centrale, aucune télémétrie.
 
-- **Assistant** : API OpenAI Responses, clé fournie par l'utilisateur, stockée dans le
-  keychain/keystore, Function Calling vers 23 outils locaux, coût estimé sur l'appareil.
-- **PRONOTE** : connecteur TypeScript (`@blockshub/pawnote-lts`, Pawnote 1.6.4) exécuté dans
-  l'application, sans relais.
-- **Base locale** : SQLite chiffrée (SQLCipher) + FTS5 pour la recherche, secrets dans
-  SecureStore.
-- **Hors ligne** : les données déjà synchronisées et l'historique des conversations restent
-  consultables sans réseau.
+- **Assistant** : API OpenAI Responses avec votre propre clé, stockée dans le coffre du
+  système, 23 outils locaux appelés par le modèle (Function Calling).
+- **PRONOTE** : connecteur TypeScript (`@blockshub/pawnote-lts`) exécuté dans
+  l'application, sans relais intermédiaire.
+- **Base locale** : SQLite chiffrée (SQLCipher) et recherche plein texte (FTS5).
+- **Hors ligne** : les données déjà synchronisées et l'historique des conversations
+  restent consultables sans réseau.
+
+## Vous débutez ? Commencez ici
+
+👉 **[Installer et tester sur Windows](docs/GUIDE_INSTALLATION_WINDOWS.md)** — guide pas à
+pas, de l'installation de Node.js jusqu'à l'APK sur votre téléphone.
+
+👉 **[Tester les fonctionnalités](docs/GUIDE_TESTS.md)** — 30 vérifications avec le
+résultat attendu pour chacune.
+
+## Démarrage rapide
+
+```bash
+npm install
+npm run verify     # types + 113 tests, sans téléphone
+```
+
+Puis, sur Windows, quatre scripts à double-cliquer :
+
+| Script | Rôle |
+| --- | --- |
+| `INSTALLER-STUDIA.bat` | Vérifie Node.js et installe les dépendances. |
+| `TESTER-STUDIA.bat` | Vérifie les types et lance les 113 tests. |
+| `CONSTRUIRE-APK.bat` | Fabrique un APK installable via Expo EAS (compte Expo gratuit requis). |
+| `LANCER-STUDIA.bat` | Démarre Metro pour recharger l'application à chaud (build `development`). |
+
+## Pourquoi pas de version web
+
+Studia repose sur SQLCipher, un chiffrement natif qui n'existe pas dans un navigateur.
+L'application refuse explicitement de démarrer sans chiffrement plutôt que d'écrire vos
+notes en clair. `expo start --web` ne fonctionne donc pas, et ce n'est pas un bug à
+corriger : la cible est Android et iOS.
 
 ## État réel du projet
 
@@ -19,71 +49,85 @@ Ce dépôt ne contient que ce qui est démontrable. Vérifié à ce jour :
 
 | Élément | Statut |
 | --- | --- |
-| TypeScript strict (`tsc --noEmit` + config tests) | ✅ passe |
-| 109 tests automatisés (`npm test`) | ✅ passent |
-| Bundle Metro Android et iOS (`expo export -p android` / `-p ios`) | ✅ se construisent |
-| Écran de chat, écrans École, réglages, connexion PRONOTE | ✅ implémentés |
-| Verrouillage biométrique (`expo-local-authentication`) | ⚠️ code et bundle OK, à valider sur appareil |
-| Connecteur PRONOTE contre un vrai établissement | ❌ **non testé** (aucun identifiant réel disponible) — test de contrat prêt : `npm run test:contract` |
-| Appels OpenAI réels | ❌ **non testés** (aucune clé API disponible) |
-| SQLCipher sur appareil | ❌ **non testé** (nécessite un development build) |
-| Tests sur appareils physiques | ❌ **non réalisés** |
+| TypeScript strict (`npm run typecheck`) | ✅ passe |
+| 113 tests automatisés (`npm test`) | ✅ passent |
+| `expo-doctor` (20 contrôles) | ✅ 20/20 |
+| Bundles Metro Android et iOS (`expo export`) | ✅ se construisent |
+| Intégration continue GitHub Actions | ✅ configurée (types, tests, deux bundles) |
+| Écrans chat, École, Réglages, connexion PRONOTE | ✅ implémentés |
+| Compilation EAS (APK) | ⏳ jamais exécutée ici — aucune compilation native possible dans cet environnement |
+| Connecteur PRONOTE face à un vrai établissement | ⏳ non testé — aucun identifiant réel disponible |
+| Appels OpenAI réels | ⏳ non testés — aucune clé API disponible |
+| SQLCipher, biométrie, caméra, tâche de fond sur appareil | ⏳ non testés — aucun appareil disponible |
 
-Les tests couvrent la logique pure et la base (moteur de synchronisation, calculs de
-moyennes, outils IA, mapping PRONOTE, FTS5, migrations, cascades). Ils ne remplacent pas
-un essai sur appareil ni une connexion réelle à PRONOTE.
-
-## Démarrage
-
-```bash
-npm install
-npm run verify        # typecheck strict + tests unitaires et d'intégration
-npm start             # Expo dev client (nécessite un development build)
-```
-
-Le projet utilise `expo-dev-client` : Expo Go ne suffit pas, car SQLCipher, SecureStore
-biométrique et les tâches de fond demandent du code natif.
-
-```bash
-npm run prebuild      # génère android/ et ios/ (expo prebuild)
-npm run android       # compile et installe sur un appareil/émulateur
-npm run ios           # idem sur iOS (macOS requis)
-```
-
-## Documentation
-
-- [Architecture](docs/architecture.md) — couches, flux de données, moteur de synchronisation.
-- [Connecteur PRONOTE](docs/pronote-connector.md) — audit des projets existants, capacités réelles, limites.
-- [Outils IA](docs/ai-tools.md) — catalogue des outils, schémas, garde-fous.
-- [Dépendances et licences](docs/dependencies.md).
-- [Compilation et publication](docs/build-and-release.md).
-- [Politique de confidentialité (brouillon à faire valider)](docs/privacy-policy.md).
+Détail complet, fonctionnalité par fonctionnalité : `docs/COMPATIBILITE_ANDROID_IOS.md`.
 
 ## Fonctions scolaires
 
 | Fonction | Nature | Où |
 | --- | --- | --- |
-| Notes, coefficients, moyennes PRONOTE | données telles que publiées | École › Notes |
-| Moyenne pondérée locale | **calcul exact** (`coefficients` ou `points`), méthode affichée | École › Notes, outil `calculate_average` |
+| Notes, coefficients, moyennes publiées | données PRONOTE telles quelles | École › Notes |
+| Moyenne pondérée locale | **calcul exact**, méthode affichée | École › Notes, outil `calculate_average` |
 | Simulation de note | **estimation** explicitement étiquetée | outil `simulate_grade` |
-| Progression, comparaison des périodes | graphiques sur données réelles (`react-native-svg`) | École › Notes |
-| Bulletins et appréciations | données PRONOTE | École › Bulletins |
-| Recherche des remarques des professeurs | FTS5 local | outil `search_teacher_feedback`, École › Recherche |
-| Synthèse des messages | données PRONOTE + lecture IA | École › Messages, outils `search_messages` |
-| Planification des devoirs, fiches, QCM, flashcards, bilan hebdo | **généré par l'IA** à partir des données locales | École › Révisions et bilans |
-| Contrôles à venir | données PRONOTE (évaluations datées, cours « contrôle ») | outil `get_upcoming_tests` |
-| Progression par matière entre périodes | **calcul exact** sur les moyennes stockées | outil `get_subject_progress` |
+| Progression par période | barres construites sur les moyennes réelles | École › Notes |
+| Contrôles à venir | évaluations datées + cours « contrôle » | outil `get_upcoming_tests` |
 | Note nécessaire pour viser une moyenne | **calcul exact**, pas une prévision | outil `simulate_average_target` |
-| Matières les plus fragiles | **calcul exact** (écart à la moyenne générale locale) | outil `get_weak_subjects` |
-| Coût OpenAI estimé | barème local, indicatif, jamais envoyé | Réglages › Assistant |
+| Matières les plus fragiles | **calcul exact** (écart à la moyenne locale) | outil `get_weak_subjects` |
+| Bulletins et appréciations | données PRONOTE | École › Bulletins |
+| Recherche des remarques des professeurs | FTS5 local | outil `search_teacher_feedback` |
+| Synthèse des messages | données PRONOTE + lecture IA | École › Messages |
+| Fiches, QCM, flashcards, bilan hebdo | **générés par l'IA** à partir des données locales | École › Révisions |
+| Coût OpenAI estimé | barème local, indicatif, jamais envoyé | Réglages › Assistant IA |
 
 ## Ce que l'application ne fait pas
 
 - Aucune connexion ENT/CAS : Pawnote ne l'expose pas (voir la matrice de capacités).
 - Aucun contournement de CAPTCHA, de double authentification ou de restriction d'onglet.
-- Aucune extraction du texte des PDF PRONOTE : le connecteur ne fournit que titre,
-  description et lien.
+- Aucune extraction du texte des PDF PRONOTE : le connecteur fournit titre, description et
+  lien, jamais le contenu.
+- Aucune pièce jointe dans le chat : la fonction n'existe pas, donc aucun bouton ne
+  l'affiche.
+- Aucune notification push : elle exigerait un serveur, interdit par l'architecture.
 - Aucune donnée inventée : un écran vide dit « aucune donnée synchronisée ».
+
+## Sécurité et vie privée
+
+- Clé OpenAI et jetons PRONOTE uniquement dans SecureStore (Keystore / Keychain).
+- Base chiffrée ; refus de démarrer si SQLCipher est absent.
+- Aucun envoi à OpenAI sans consentement explicite, vérifié dans le service et pas
+  seulement dans l'interface.
+- Les textes venant de PRONOTE sont traités comme des données non fiables, jamais comme
+  des consignes : une injection de prompt dans un message scolaire reste du texte.
+- `store: false` demandé à l'API ; aucune télémétrie, aucune publicité.
+- Une clé stockée sur un téléphone reste extractible par la personne qui contrôle
+  l'appareil : ce n'est pas un secret inviolable, et l'application ne prétend pas le
+  contraire.
+
+Politique de confidentialité (brouillon à faire valider) :
+`docs/privacy-policy.md`.
+
+## Documentation
+
+- [Guide Windows](docs/GUIDE_INSTALLATION_WINDOWS.md) — installation de A à Z.
+- [Guide de tests](docs/GUIDE_TESTS.md) — automatiques et manuels.
+- [Compatibilité Android / iOS](docs/COMPATIBILITE_ANDROID_IOS.md) — matrice vérifiée.
+- [Audit](docs/audit.md) — constats, corrections, points ouverts.
+- [Architecture](docs/architecture.md) — couches, flux, moteur de synchronisation.
+- [Connecteur PRONOTE](docs/pronote-connector.md) — capacités réelles et limites.
+- [Outils IA](docs/ai-tools.md) — catalogue des 23 outils et garde-fous.
+- [Dépendances et licences](docs/dependencies.md).
+- [Compilation et publication](docs/build-and-release.md).
+
+## Commandes utiles
+
+| Commande | Effet |
+| --- | --- |
+| `npm run verify` | Types (app + tests) puis tous les tests. |
+| `npm run typecheck` | Vérification TypeScript seule. |
+| `npm test` | Tests unitaires et d'intégration. |
+| `npm run test:contract` | Test de contrat PRONOTE (identifiants requis). |
+| `npx expo export -p android` | Vérifie que le bundle Android se construit. |
+| `npx eas-cli@latest build -p android --profile preview` | Fabrique un APK. |
 
 ## Licence
 

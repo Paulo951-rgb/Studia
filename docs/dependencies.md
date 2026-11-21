@@ -17,16 +17,17 @@ des `package.json` des paquets et du code publié.
 | `expo-task-manager` | ~58.0.14 | MIT | définition des tâches de fond |
 | `expo-camera` | ~58.0.14 | MIT | scan du QR code PRONOTE |
 | `expo-local-authentication` | ~58.0.3 | MIT | verrouillage biométrique |
-| `expo-network` | ~58.0.5 | MIT | détection hors ligne |
+| `expo-network` | ~58.0.5 | MIT | **installé, inutilisé** |
 | `expo-clipboard` | ~58.0.4 | MIT | copier une réponse |
-| `expo-file-system` | ~58.0.14 | MIT | pièces jointes locales |
-| `expo-document-picker` | ~58.0.5 | MIT | import de fichiers |
-| `expo-sharing` | ~58.0.23 | MIT | export de fichiers |
-| `expo-print` | ~58.0.9 | MIT | export PDF |
-| `expo-haptics`, `expo-splash-screen`, `expo-status-bar`, `expo-system-ui`, `expo-linking`, `expo-constants` | ~58.x | MIT | support UI |
+| `expo-file-system` | ~58.0.14 | MIT | **installé, inutilisé** |
+| `expo-document-picker` | ~58.0.5 | MIT | **installé, inutilisé** (aucune pièce jointe dans le chat) |
+| `expo-sharing` | ~58.0.23 | MIT | **installé, inutilisé** |
+| `expo-print` | ~58.0.9 | MIT | **installé, inutilisé** |
+| `expo-haptics`, `expo-system-ui`, `expo-constants` | ~58.x | MIT | **installé, inutilisé** |
+| `expo-splash-screen`, `expo-status-bar`, `expo-linking` | ~58.x | MIT | support UI |
 | `react` / `react-dom` | 19.3.0 | MIT | rendu |
 | `react-native` | 0.88.1 | MIT | runtime natif |
-| `react-native-svg` | 15.16.0 | MIT | graphiques de progression |
+| `react-native-svg` | 15.16.0 | MIT | **installé, inutilisé** : la progression est dessinée avec des `View` |
 | `react-native-safe-area-context` | ~5.11.1 | MIT | marges système |
 | `react-native-screens` | ~4.30.1 | MIT | navigation native |
 | `react-native-gesture-handler` | ~3.3.0 | MIT | gestes |

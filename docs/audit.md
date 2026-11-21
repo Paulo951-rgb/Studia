@@ -171,3 +171,47 @@ Restent ouverts, sans solution honnête à ce jour :
 - vérification contre un établissement PRONOTE réel (identifiants indisponibles) ;
 - SQLCipher et biométrie sur appareil physique (development build requis) ;
 - notifications : seules des notifications locales planifiées sont possibles sans serveur.
+
+## 8. Audit du 2026-11-21 (mise en service du dépôt Studia)
+
+### 8.1 Constat de départ
+
+Le dépôt `Paulo951-rgb/Studia` ne contenait qu'un `README.md` de 8 octets. L'application
+existait uniquement en local. Rien n'était donc téléchargeable, testable ni publiable.
+
+### 8.2 Corrigé
+
+| Problème | Correction | Preuve |
+| --- | --- | --- |
+| Dépôt vide, aucun code publié | fusion de l'historique local dans `main` (sans `--force`, sans réécriture) | 113 fichiers sur `main`, arbre distant vérifié |
+| `app.json` invalide pour le SDK 58 : `android.edgeToEdgeEnabled` et `newArchEnabled` rejetés par le schéma | champs retirés (edge-to-edge et nouvelle architecture sont déjà par défaut) | `expo-doctor` : 20/20 |
+| Nom du produit incohérent avec le dépôt (Scolary / Studia) | renommage complet avant toute publication : nom affiché, slug, schéma d'URL, `app.studia.mobile`, clés SecureStore, fichier de base, tâche de fond | `npm run verify` et `expo export` après renommage |
+| Message de l'utilisateur perdu si le consentement ou la clé API manque | la question est enregistrée avant le contrôle | `src/providers/ai/service.ts`, règle testée dans `tests/unit/gate.test.ts` |
+| Interface figée sur « Réflexion… » si le fournisseur lève une exception | `try/catch` autour du tour de chat, état `streaming` toujours réinitialisé | `src/state/appStore.ts` |
+| Bouton d'actualisation bloqué si la synchronisation lève | `try/catch` dans `syncNow` | `src/state/appStore.ts` |
+| Bouton « ＋ » de pièce jointe qui n'ouvrait qu'un message « non implémenté » | bouton supprimé : aucune fonction factice | `src/app/(tabs)/index.tsx` |
+| Documentation affirmant des graphiques `react-native-svg` alors que la progression est dessinée en `View` | docs corrigées | `README.md`, `docs/dependencies.md` |
+| Aucune intégration continue | workflow GitHub Actions : types, tests, bundles Android et iOS | `.github/workflows/ci.yml` |
+| Aucune méthode de test simple sous Windows | profils EAS, quatre scripts `.bat`, guide détaillé | `eas.json`, `*.bat`, `docs/GUIDE_INSTALLATION_WINDOWS.md` |
+
+### 8.3 Constats laissés ouverts (assumés)
+
+| Constat | Raison | Suite proposée |
+| --- | --- | --- |
+| 10 dépendances installées mais inutilisées (`react-native-svg`, `expo-print`, `expo-sharing`, `expo-document-picker`, `expo-file-system`, `expo-haptics`, `expo-network`, `expo-constants`, `expo-system-ui`, `react-native-web`) | les retirer modifie la compilation native, qui n'a pas pu être testée ici | retirer une par une, avec un build de contrôle après chaque retrait |
+| `expo export --platform web` échoue | SQLCipher et le worker wasm de `expo-sqlite` sont incompatibles avec un navigateur | hors périmètre : la cible est mobile |
+| Aucune pièce jointe dans le chat | l'API Responses accepte des fichiers, mais l'implémentation demande un sélecteur natif et ne peut pas être vérifiée ici | implémenter avec `expo-document-picker` puis tester sur appareil |
+| Aucune notification | les notifications push exigent un serveur ; seules des notifications locales seraient possibles | notifications locales planifiées pour les contrôles à venir |
+| Messages du chat rendus dans une `ScrollView` | correct jusqu'à quelques centaines de messages | passer à `FlatList` inversée au-delà |
+| Aucun test sur appareil, aucun appel réel PRONOTE/OpenAI | environnement sans appareil, sans identifiant, sans clé | exécuter `docs/GUIDE_TESTS.md` §2 sur un téléphone |
+
+### 8.4 Vérifications réellement exécutées
+
+| Vérification | Résultat |
+| --- | --- |
+| `npm run verify` (typecheck app + tests, 113 tests) | ✅ 113 / 113 |
+| `expo-doctor` (20 contrôles) | ✅ 20 / 20 |
+| `npx expo export -p android` | ✅ bundle produit |
+| `npx expo export -p ios` | ✅ bundle produit |
+| `npx expo start --dev-client` (démarrage de Metro) | ✅ `packager-status:running` |
+| Compilation native, installation sur appareil, PRONOTE réel, OpenAI réel | ❌ non réalisables dans cet environnement |

@@ -58,7 +58,22 @@ SQLite : les dépôts tournent sur une vraie base en mémoire.
 
 ## État
 
-- 109 tests passent, typecheck strict OK, bundles Android et iOS OK.
+- 113 tests passent, typecheck strict OK, bundles Android et iOS OK, `expo-doctor` 20/20.
 - Non testé faute de moyens : connexion PRONOTE réelle, appels OpenAI réels, SQLCipher,
   verrou biométrique et tâche de fond sur appareil. Voir `docs/build-and-release.md` §7.
-- Constats de l'audit et leur traitement : `docs/audit.md` §7.
+- Constats de l'audit et leur traitement : `docs/audit.md` §7 et §8.
+
+## Dépôt et publication
+
+- Dépôt : `https://github.com/Paulo951-rgb/Studia`, branche `main`, dépôt **privé**.
+- Le produit s'appelle **Studia** partout (nom, slug, schéma, `app.studia.mobile`, clés
+  SecureStore `studia.*`, base `studia.db`). Ne pas réintroduire l'ancien nom.
+- Profils EAS dans `eas.json` : `development` (dev client, APK), `preview` (APK autonome,
+  le bon choix pour tester), `production` (AAB).
+- Scripts Windows à la racine : `INSTALLER-STUDIA.bat`, `TESTER-STUDIA.bat`,
+  `CONSTRUIRE-APK.bat`, `LANCER-STUDIA.bat`. Les garder en ASCII pur (cmd casse les
+  accents) et toujours terminer par `pause`.
+- `preview` n'a pas besoin de Metro ; `development` en a besoin. Ne pas confondre dans la
+  documentation.
+- Aucune compilation native n'est possible dans cet environnement (ni Java, ni SDK
+  Android, ni Mac) : ne jamais affirmer qu'un APK a été produit.
