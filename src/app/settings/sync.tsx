@@ -6,7 +6,7 @@ import { usePalette, spacing } from '@/ui/theme/theme';
 import { AppText, Button, Card, Chip, EmptyState, Muted, Row, Spinner } from '@/ui/components/primitives';
 import { formatDateTime, formatRelative } from '@/ui/format';
 import { PRONOTE_ERROR_LABELS, type PronoteErrorCode } from '@/core/pronote/errors';
-import { SYNC_ORDER } from '@/core/sync/engine';
+import { SYNC_ORDER, type SyncResource } from '@/core/sync/engine';
 import { isBackgroundSyncEnabled, setBackgroundSyncEnabled } from '@/platform/backgroundSync';
 
 export default function SyncScreen() {
@@ -32,6 +32,13 @@ export default function SyncScreen() {
     return { history, account };
   }, [activeAccountId, lastSyncSummary?.runId]);
 
+  // Only resources that failed, and only those the connector knows how to fetch again:
+  // a targeted run always re-reads profile and periods, so they are not listed twice.
+  const failedResources: SyncResource[] =
+    lastSyncSummary === null
+      ? []
+      : SYNC_ORDER.filter((resource) => lastSyncSummary.resources[resource]?.status === 'error');
+
   if (!activeAccountId) {
     return (
       <View style={{ flex: 1, padding: spacing.lg }}>
@@ -49,6 +56,14 @@ export default function SyncScreen() {
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
           <Button label={syncRunning ? 'Synchronisation…' : 'Synchroniser maintenant'} onPress={() => void syncNow('manual').then(reload)} loading={syncRunning} style={{ flex: 1 }} />
         </View>
+        {failedResources.length > 0 ? (
+          <Button
+            label={`Réessayer ${failedResources.length} ressource(s) en échec`}
+            variant="secondary"
+            disabled={syncRunning}
+            onPress={() => void syncNow('manual', failedResources).then(reload)}
+          />
+        ) : null}
         <Muted>
           Une synchronisation incrémentale est tentée à l’ouverture de l’application si la dernière date de plus de 10 minutes.
           Le budget de requêtes est plafonné pour ne pas surcharger le serveur de l’établissement.

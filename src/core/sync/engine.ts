@@ -96,6 +96,12 @@ export type SyncOptions = {
   requestBudget?: number;
   /** Incremental windows, in days. */
   windows?: { pastDays: number; futureDays: number };
+  /**
+   * Restricts the run to these resources, used to retry what failed without
+   * re-downloading everything. `profile` and `periods` are always included because
+   * every other resource resolves its scope through them.
+   */
+  only?: SyncResource[];
 };
 
 class BudgetExceededError extends Error {
@@ -127,6 +133,10 @@ export async function runSync(options: SyncOptions): Promise<SyncSummary> {
 
   const tabs = new Set(source.authorizedTabs());
 
+  const wanted: Set<SyncResource> | null = options.only
+    ? new Set<SyncResource>([...options.only, 'profile', 'periods'])
+    : null;
+
   let budgetExhausted = false;
 
   const consume = (): void => {
@@ -139,13 +149,23 @@ export async function runSync(options: SyncOptions): Promise<SyncSummary> {
   };
 
   const record = (resource: SyncResource, report: ResourceReport): void => {
-    // A budget stop is final: later branches must not overwrite it with "empty".
-    if (resources[resource]?.errorCode === 'request_budget_exceeded') return;
+    // A budget stop or an explicit resource selection is final: later branches must
+    // not overwrite it with "empty".
+    if (
+      resources[resource]?.errorCode === 'request_budget_exceeded' ||
+      resources[resource]?.errorCode === 'not_requested'
+    ) {
+      return;
+    }
     resources[resource] = report;
     onProgress?.(resource, report);
   };
 
   const guard = async <T>(resource: SyncResource, task: () => Promise<T>): Promise<T | null> => {
+    if (wanted && !wanted.has(resource)) {
+      record(resource, { status: 'skipped', items: 0, errorCode: 'not_requested' });
+      return null;
+    }
     if (signal?.aborted || aborted) {
       aborted = true;
       record(resource, { status: 'skipped', items: 0, errorCode: 'aborted' });
@@ -300,9 +320,23 @@ export async function runSync(options: SyncOptions): Promise<SyncSummary> {
         return source.fetchDiscussions();
       });
       if (discussions) {
+        // Read the stored counters before saving: a discussion whose counters did not
+        // move has nothing new to download, which saves one request per thread.
+        const stored = new Map(
+          (await repos.school.listDiscussions(accountId, 200)).map((entry) => [entry.nativeId, entry]),
+        );
         await repos.writer.saveDiscussions(accountId, discussions);
+        const changed = discussions.filter((discussion) => {
+          const previous = stored.get(discussion.nativeId);
+          if (!previous) return true;
+          return (
+            previous.messageCount !== discussion.messageCount ||
+            previous.unreadCount !== discussion.unreadCount ||
+            previous.lastMessageAt !== discussion.lastMessageAt
+          );
+        });
         let total = 0;
-        for (const discussion of discussions.slice(0, 25)) {
+        for (const discussion of changed.slice(0, 25)) {
           const messages = await guard('messages', async () => {
             consume();
             return source.fetchMessages(discussion.id);
@@ -457,10 +491,22 @@ export async function refreshComputedAverages(repos: Repositories, accountId: st
   const now = new Date().toISOString();
 
   for (const period of periods) {
+    // One query per period instead of one per (period, subject) pair. The reader caps a
+    // page at 500 rows, far above what a single period holds.
+    const periodGrades = await repos.school.listGrades({ accountId, periodId: period.id, limit: 500 });
+    if (periodGrades.length === 0) continue;
+    const gradesBySubject = new Map<string, typeof periodGrades>();
+    for (const grade of periodGrades) {
+      if (!grade.subjectId) continue;
+      const bucket = gradesBySubject.get(grade.subjectId);
+      if (bucket) bucket.push(grade);
+      else gradesBySubject.set(grade.subjectId, [grade]);
+    }
+
     const inputs = [];
     for (const subject of subjects) {
-      const grades = await repos.school.listGrades({ accountId, periodId: period.id, subjectId: subject.id, limit: 500 });
-      if (grades.length === 0) continue;
+      const grades = gradesBySubject.get(subject.id);
+      if (!grades || grades.length === 0) continue;
       inputs.push({ subjectId: subject.id, subjectName: subject.name, grades, subjectCoefficient: null });
     }
     if (inputs.length === 0) continue;

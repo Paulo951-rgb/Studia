@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, Switch, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/state/appStore';
 import { usePalette, spacing } from '@/ui/theme/theme';
 import { AppText, Banner, Button, Card, Muted, Row } from '@/ui/components/primitives';
 import { wipeDatabase } from '@/platform/database';
-import { wipeAllSecrets } from '@/platform/secureStore';
+import { isAppLockEnabled, setAppLock, wipeAllSecrets } from '@/platform/secureStore';
+import { lockAvailability, unlockWithDevice } from '@/platform/appLock';
 
 export default function PrivacyScreen() {
   const { palette } = usePalette();
@@ -13,6 +14,40 @@ export default function PrivacyScreen() {
   const accounts = useAppStore((state) => state.accounts);
 
   const [confirmStep, setConfirmStep] = useState(0);
+  const [lockEnabled, setLockEnabled] = useState(false);
+  const [lockBusy, setLockBusy] = useState(false);
+  const [lockNotice, setLockNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => setLockEnabled(await isAppLockEnabled()))();
+  }, []);
+
+  const toggleLock = async (next: boolean) => {
+    setLockBusy(true);
+    try {
+      if (next) {
+        const availability = await lockAvailability();
+        if (!availability.usable) {
+          setLockNotice(
+            'Cet appareil n’a pas de biométrie configurée. Ajoutez une empreinte ou un visage dans les réglages du téléphone.',
+          );
+          return;
+        }
+        const result = await unlockWithDevice();
+        if (!result.ok) {
+          setLockNotice(result.message);
+          return;
+        }
+      }
+      await setAppLock(next);
+      setLockEnabled(next);
+      setLockNotice(null);
+    } catch (error) {
+      setLockNotice(error instanceof Error ? error.message : 'Réglage impossible.');
+    } finally {
+      setLockBusy(false);
+    }
+  };
 
   const wipeEverything = () => {
     Alert.alert(
@@ -53,6 +88,27 @@ export default function PrivacyScreen() {
         <Row title="Secrets" subtitle="Jeton PRONOTE, UUID d’appareil, clé OpenAI : trousseau uniquement" />
         <Row title="Journaux" subtitle="Aucune télémétrie, aucun analytics, aucune publicité" />
         <Row title="Recherche" subtitle="Index FTS5 local, sans envoi réseau" />
+      </Card>
+
+      <Card style={{ gap: spacing.sm }}>
+        <AppText variant="heading">Verrouillage de l’application</AppText>
+        <Muted>
+          Demande votre empreinte, votre visage ou le code de l’appareil à l’ouverture et au retour au premier plan.
+          Le verrou protège l’affichage : il ne chiffre pas davantage la base, déjà chiffrée par SQLCipher.
+        </Muted>
+        <Row
+          title="Verrouillage biométrique"
+          subtitle={lockEnabled ? 'Activé' : 'Désactivé'}
+          right={
+            <Switch
+              value={lockEnabled}
+              disabled={lockBusy}
+              onValueChange={(value) => void toggleLock(value)}
+              trackColor={{ false: palette.border, true: palette.accent }}
+            />
+          }
+        />
+        {lockNotice ? <Banner tone="warning" title="Verrouillage" description={lockNotice} /> : null}
       </Card>
 
       <Card style={{ gap: spacing.sm }}>

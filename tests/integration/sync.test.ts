@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runSync, type SyncSource } from '@/core/sync/engine';
-import { createTestRepositories } from '../helpers/db';
+import { refreshComputedAverages, runSync, type SyncSource } from '@/core/sync/engine';
+import { createTestRepositories, seedSchool } from '../helpers/db';
 import {
   ACCOUNT_ID,
   absence,
@@ -278,4 +278,72 @@ test('a rate-limited school server is reported as retryable and does not erase d
   assert.equal(summary.resources['homework']?.errorCode, 'rate_limited');
   const counts = await repos.school.counts(ACCOUNT_ID);
   assert.equal(counts['homework'], 1);
+});
+
+test('a targeted sync only downloads the requested resources', async () => {
+  const repos = await createTestRepositories();
+  const source = createFakeSource();
+  await runSync({ repos, source, accountId: ACCOUNT_ID, kind: 'initial', now: fixedNow });
+
+  const retrySource = createFakeSource();
+  const summary = await runSync({
+    repos,
+    source: retrySource,
+    accountId: ACCOUNT_ID,
+    kind: 'manual',
+    now: fixedNow,
+    only: ['news'],
+  });
+
+  assert.equal(summary.resources['news']?.status, 'ok');
+  assert.equal(summary.resources['grades']?.status, 'skipped');
+  assert.equal(summary.resources['grades']?.errorCode, 'not_requested');
+  // profile and periods are always fetched: every other resource resolves through them.
+  assert.ok(retrySource.calls.includes('fetchProfile'));
+  assert.ok(retrySource.calls.includes('fetchPeriods'));
+  assert.ok(!retrySource.calls.includes('fetchGrades'));
+  assert.ok(!retrySource.calls.includes('fetchTimetable'));
+  assert.ok(retrySource.calls.includes('fetchNews'));
+});
+
+test('messages are not re-downloaded when the discussion counters did not move', async () => {
+  const repos = await createTestRepositories();
+  const first = createFakeSource();
+  await runSync({ repos, source: first, accountId: ACCOUNT_ID, kind: 'initial', now: fixedNow });
+  assert.ok(first.calls.includes('fetchMessages'));
+
+  const second = createFakeSource();
+  const summary = await runSync({ repos, source: second, accountId: ACCOUNT_ID, kind: 'incremental', now: fixedNow });
+  assert.equal(summary.resources['messages']?.status, 'ok');
+  assert.ok(!second.calls.includes('fetchMessages'), 'no request when messageCount and unreadCount are unchanged');
+
+  const changed = createFakeSource();
+  changed.fetchDiscussions = async () => {
+    changed.calls.push('fetchDiscussions');
+    return [{ ...discussion, messageCount: discussion.messageCount + 1, unreadCount: discussion.unreadCount + 1 }];
+  };
+  const third = await runSync({ repos, source: changed, accountId: ACCOUNT_ID, kind: 'incremental', now: fixedNow });
+  assert.equal(third.resources['messages']?.status, 'ok');
+  assert.ok(changed.calls.includes('fetchMessages'), 'a moved counter triggers one request for that thread');
+});
+
+test('recomputed averages come from stored grades and stay stable across runs', async () => {
+  const repos = await createTestRepositories();
+  await seedSchool(repos);
+  await repos.writer.saveGrades(
+    ACCOUNT_ID,
+    period.id,
+    [grade({ valuePoints: 14, coefficient: 2 }), grade({ id: 'gra_2', nativeId: 'G2', valuePoints: 8, coefficient: 1 })],
+    false,
+  );
+
+  await refreshComputedAverages(repos, ACCOUNT_ID, [period]);
+  const first = await repos.school.listAverages({ accountId: ACCOUNT_ID, periodId: period.id });
+  const computed = first.filter((entry) => entry.source === 'computed');
+  assert.equal(computed.length, 1, 'one computed average for the graded subject');
+  assert.equal(computed[0]?.studentValue, 12);
+
+  await refreshComputedAverages(repos, ACCOUNT_ID, [period]);
+  const second = await repos.school.listAverages({ accountId: ACCOUNT_ID, periodId: period.id });
+  assert.deepEqual(second, first, 'a second run does not duplicate or drift');
 });

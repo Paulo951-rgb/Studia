@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Repositories } from '@/db';
 import type { Account, ChatMessage } from '@/core/domain/types';
-import type { SyncSummary } from '@/core/sync/engine';
+import type { SyncResource, SyncSummary } from '@/core/sync/engine';
 import { getRepositories } from '@/platform/database';
 import { EncryptionUnavailableError } from '@/db/expoDriver';
 import { createConversation, sendChatTurn, getModel } from '@/providers/ai/service';
@@ -35,7 +35,7 @@ type AppState = {
   send: (text: string) => Promise<void>;
   regenerate: () => Promise<void>;
   cancel: () => void;
-  syncNow: (kind: 'initial' | 'manual' | 'incremental') => Promise<void>;
+  syncNow: (kind: 'initial' | 'manual' | 'incremental', only?: SyncResource[]) => Promise<void>;
   clearError: () => void;
 };
 
@@ -212,12 +212,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ streaming: false, streamingText: '', toolActivity: null });
   },
 
-  async syncNow(kind) {
+  async syncNow(kind, only) {
     const { repos, activeAccountId } = get();
     if (!repos || !activeAccountId) return;
     if (get().syncRunning) return;
     set({ syncRunning: true, lastError: null });
-    const summary = await syncAccount(repos, activeAccountId, { kind });
+    const summary = await syncAccount(repos, activeAccountId, { kind, ...(only ? { only } : {}) });
     const accounts = await repos.accounts.list();
     const account = accounts.find((entry) => entry.id === activeAccountId);
     set({

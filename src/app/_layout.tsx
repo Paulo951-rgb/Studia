@@ -1,11 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { useAppStore } from '@/state/appStore';
 import { usePalette } from '@/ui/theme/theme';
 import { AppText, Button, Screen } from '@/ui/components/primitives';
+import { isAppLockEnabled } from '@/platform/secureStore';
+import { unlockWithDevice } from '@/platform/appLock';
+
+type LockState = 'checking' | 'locked' | 'unlocked';
 
 export default function RootLayout() {
   const { palette } = usePalette();
@@ -13,9 +18,51 @@ export default function RootLayout() {
   const fatalMessage = useAppStore((state) => state.fatalMessage);
   const bootstrap = useAppStore((state) => state.bootstrap);
 
+  const [lockState, setLockState] = useState<LockState>('checking');
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const unlockInFlight = useRef(false);
+  const autoPrompted = useRef(false);
+
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    void (async () => {
+      setLockState((await isAppLockEnabled()) ? 'locked' : 'unlocked');
+    })();
+  }, []);
+
+  // The lock must close again when the app leaves the foreground, otherwise a phone
+  // handed to someone else exposes the school data from the app switcher.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') return;
+      setLockState((current) => (current === 'unlocked' ? 'locked' : current));
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const unlock = useCallback(async () => {
+    if (unlockInFlight.current) return;
+    unlockInFlight.current = true;
+    const result = await unlockWithDevice();
+    unlockInFlight.current = false;
+    if (result.ok) {
+      setUnlockError(null);
+      autoPrompted.current = false;
+      setLockState('unlocked');
+      return;
+    }
+    setUnlockError(result.message);
+    setLockState('locked');
+  }, []);
+
+  useEffect(() => {
+    if (lockState !== 'locked' || autoPrompted.current) return;
+    autoPrompted.current = true;
+    void unlock();
+  }, [lockState, unlock]);
 
   if (status === 'booting') {
     return (
@@ -40,6 +87,27 @@ export default function RootLayout() {
           contenant SQLCipher (`expo prebuild` avec le plugin expo-sqlite, `useSQLCipher: true`).
         </AppText>
         <Button label="Réessayer" onPress={() => void bootstrap()} />
+      </Screen>
+    );
+  }
+
+  if (lockState === 'checking') {
+    return (
+      <Screen style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={palette.accent} />
+      </Screen>
+    );
+  }
+
+  if (lockState === 'locked') {
+    return (
+      <Screen style={{ padding: 24, justifyContent: 'center', gap: 12 }}>
+        <AppText variant="title">Scolary est verrouillé</AppText>
+        <AppText variant="body" color="textMuted">
+          Vos notes, messages et conversations restent sur ce téléphone. Déverrouillez pour les consulter.
+        </AppText>
+        {unlockError ? <AppText variant="caption" color="danger">{unlockError}</AppText> : null}
+        <Button label="Déverrouiller" onPress={() => void unlock()} />
       </Screen>
     );
   }

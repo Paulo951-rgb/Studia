@@ -133,6 +133,7 @@ export type SyncAccountOptions = {
   kind: 'initial' | 'incremental' | 'manual' | 'background';
   signal?: AbortSignal;
   onProgress?: Parameters<typeof runSync>[0]['onProgress'];
+  only?: Parameters<typeof runSync>[0]['only'];
 };
 
 export async function syncAccount(
@@ -149,6 +150,7 @@ export async function syncAccount(
       kind: options.kind,
       ...(options.signal ? { signal: options.signal } : {}),
       ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+      ...(options.only ? { only: options.only } : {}),
     });
     if (summary.requiresReauth) {
       await repos.accounts.setStatus(accountId, 'expired');
