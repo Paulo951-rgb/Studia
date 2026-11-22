@@ -134,7 +134,8 @@ test('function_call and function_call_output input items are serialized without 
     { type: 'function_call_output', call_id: 'call_1', output: '{"averages":[]}' },
   ];
   await collect(provider.stream({ ...request(), input }));
-  const sent = payload?.['input'] as Record<string, unknown>[];
+  const captured = payload as unknown as Record<string, unknown>;
+  const sent = captured['input'] as Record<string, unknown>[];
   assert.equal(sent[1]?.['type'], 'function_call');
   assert.equal(sent[1]?.['name'], 'get_averages');
   assert.equal(sent[2]?.['type'], 'function_call_output');
