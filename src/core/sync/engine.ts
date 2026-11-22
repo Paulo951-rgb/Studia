@@ -336,16 +336,21 @@ export async function runSync(options: SyncOptions): Promise<SyncSummary> {
           );
         });
         let total = 0;
+        let messagesFailed = false;
         for (const discussion of changed.slice(0, 25)) {
           const messages = await guard('messages', async () => {
             consume();
             return source.fetchMessages(discussion.id);
           });
-          if (!messages) break;
+          if (!messages) {
+            messagesFailed = true;
+            break;
+          }
           await repos.writer.saveMessages(accountId, discussion.id, messages);
           total += messages.length;
         }
-        record('messages', { status: 'ok', items: total });
+        // Do not overwrite a per-thread failure with a false resource success.
+        if (!messagesFailed) record('messages', { status: 'ok', items: total });
       }
     } else {
       record('messages', { status: 'skipped', items: 0, errorCode: 'not_authorized_tab' });
