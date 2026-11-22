@@ -11,7 +11,7 @@
 
 ```bash
 npm install
-npm run verify     # tsc --noEmit + tsc -p tsconfig.test.json + 86 tests
+npm run verify     # tsc --noEmit + tsc -p tsconfig.test.json + suite de tests actuelle
 ```
 
 Aucune étape de build n'est nécessaire pour lancer les tests : ils utilisent `node:sqlite`
@@ -46,8 +46,7 @@ eas build -p android --profile production
 eas build -p ios --profile production
 ```
 
-`eas.json` n'est pas fourni : créez-le avec les profils souhaités. Pour Android, préférez
-un build `app-bundle` (AAB) pour le Play Store.
+Les profils EAS sont définis dans `eas.json` (`development`, `preview`, `production`). Pour Android, le profil `production` produit un `app-bundle` (AAB) pour le Play Store.
 
 ### Build local
 
