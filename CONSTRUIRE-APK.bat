@@ -54,7 +54,9 @@ echo 1. Le lien de telechargement de l'APK est affiche ci-dessus.
 echo    Vous le retrouvez aussi sur https://expo.dev (Builds).
 echo 2. Telechargez le fichier .apk sur le telephone Android.
 echo 3. Ouvrez-le et autorisez l'installation depuis cette source.
-echo 4. Lancez ensuite LANCER-STUDIA.bat pour le rechargement a chaud.
+echo 4. Cet APK preview fonctionne de facon autonome, sans serveur Metro.
+echo    Pour recharger le code a chaud, construisez le profil development :
+echo    npx eas-cli@latest build -p android --profile development
 echo.
 pause
 exit /b 0
