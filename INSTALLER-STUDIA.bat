@@ -50,8 +50,9 @@ echo Prochaines etapes :
 echo   1. Double-cliquez sur TESTER-STUDIA.bat pour verifier le projet.
 echo   2. Double-cliquez sur CONSTRUIRE-APK.bat pour obtenir une application
 echo      Android installable sur votre telephone.
-echo   3. Une fois l'APK installe, LANCER-STUDIA.bat demarre le serveur de
-echo      developpement pour recharger l'application a chaud.
+echo   3. Pour une demo PC sans telephone, double-cliquez sur
+ echo      DEMARRER-STUDIA-PC.bat (donnees fictives, aucune installation).
+echo   4. L'APK preview fonctionne seul ; Metro exige un APK development.
 echo.
 echo Aucune donnee personnelle n'a ete demandee ni envoyee.
 echo.
