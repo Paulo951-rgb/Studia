@@ -116,6 +116,32 @@ test('the stop button still reports a cancellation, not a timeout', async () => 
   assert.equal(value.code, 'cancelled');
 });
 
+test('tool-call rounds replay function_call before function_call_output', async () => {
+  const requests: ProviderRequest[] = [];
+  let round = 0;
+  const provider: AiProvider = {
+    id: 'stub',
+    async *stream(request): AsyncIterable<ProviderEvent> {
+      requests.push(request);
+      round += 1;
+      if (round === 1) yield { type: 'function_call', callId: 'call_profile', name: 'get_student_profile', arguments: '{}' };
+      else yield { type: 'text_delta', delta: 'Profil chargé.' };
+      yield { type: 'completed', responseId: `resp_${round}` };
+    },
+  };
+  const runner: ToolRunner = { async run() { return { ok: true, data: '{"name":"Élève"}' }; } };
+  const result = await runAgentTurn({
+    provider, runner, model: 'gpt-4.1-mini', instructions: 'test', history: [],
+    userMessage: 'Qui suis-je ?', tools: TOOLS,
+  });
+  assert.equal(result.text, 'Profil chargé.');
+  assert.equal(result.errorCode, null);
+  assert.deepEqual(requests[1]?.input.slice(1), [
+    { type: 'function_call', call_id: 'call_profile', name: 'get_student_profile', arguments: '{}' },
+    { type: 'function_call_output', call_id: 'call_profile', output: '{"name":"Élève"}' },
+  ]);
+});
+
 test('an exhausted tool-round budget is reported instead of an empty answer', async () => {
   const provider: AiProvider = {
     id: 'stub',
