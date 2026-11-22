@@ -215,3 +215,30 @@ existait uniquement en local. Rien n'était donc téléchargeable, testable ni p
 | `npx expo export -p ios` | ✅ bundle produit |
 | `npx expo start --dev-client` (démarrage de Metro) | ✅ `packager-status:running` |
 | Compilation native, installation sur appareil, PRONOTE réel, OpenAI réel | ❌ non réalisables dans cet environnement |
+
+
+## 9. Corrections complémentaires — 22 novembre 2026
+
+Les corrections suivantes ont été poussées sur `main` après une nouvelle lecture ciblée du code. Elles ne remplacent pas les tests natifs ni les tests avec un établissement réel.
+
+| Zone | Modification |
+| --- | --- |
+| OpenAI Responses avec `store:false` | L'historique de chaque tour retransmet désormais les éléments assistant `function_call` avant les résultats `function_call_output`. Le sérialiseur conserve les deux types. |
+| Injection via données PRONOTE | `fenceUntrusted` neutralise maintenant les marqueurs de début/fin présents dans le texte externe avant de l'encadrer. |
+| Messages PRONOTE | Un échec sur un fil de discussion n'est plus écrasé par un statut global « ok ». |
+| Réseau PRONOTE | Un délai maximal de 25 secondes est appliqué à chaque requête du fetcher. |
+| Tâche de fond | Le module déclarant la tâche Expo est importé depuis le layout racine au démarrage. |
+| Windows | Le script d'installation exige Node 22.5+ (requis par `node:sqlite`). |
+| Scripts APK | Les instructions distinguent le profil EAS `preview` (autonome) du profil `development` (nécessite Metro). |
+| Prévisualisation PC | Ajout de `pc-preview/index.html` et `DEMARRER-STUDIA-PC.bat` : démo locale, interactive et sans installation, avec données fictives. |
+| Documentation | Correction des mentions erronées de dépôt privé et d'absence de `eas.json`, ajout du parcours PC Preview. |
+
+### Limites et vérifications encore nécessaires
+
+- La démo PC est une **maquette interactive** : elle ne lance pas le code React Native réel, ne teste pas SQLCipher, ne contacte pas PRONOTE et n'appelle pas OpenAI.
+- Le nom d'utilisateur PRONOTE n'est pas encore persisté comme champ indépendant dans le modèle de compte ; le mécanisme de reprise de session doit être confirmé avec le contrat Pawnote et un vrai compte avant toute migration de schéma.
+- La synchronisation des notes, bulletins et évaluations reste limitée au périmètre de période implémenté ; il faut confirmer le comportement multi-période sur plusieurs comptes PRONOTE.
+- Le traitement des parcours de double authentification PRONOTE dépend des capacités réelles exposées par Pawnote et n'est pas validé contre un établissement.
+- Le délai réseau est appliqué au fetcher, mais les retries doivent rester prudents et ne sont pas ajoutés automatiquement.
+- La limite de 25 discussions par synchronisation reste en place pour maîtriser le nombre de requêtes.
+- Aucun résultat CI vert ne doit être annoncé tant que le workflow correspondant au dernier commit n'est pas terminé avec succès. Aucun test sur appareil physique ni authentification PRONOTE/OpenAI réelle n'a été exécuté dans cet audit.
