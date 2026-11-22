@@ -9,6 +9,8 @@ import { usePalette } from '@/ui/theme/theme';
 import { AppText, Button, Screen } from '@/ui/components/primitives';
 import { isAppLockEnabled } from '@/platform/secureStore';
 import { unlockWithDevice } from '@/platform/appLock';
+// Register the background task at app startup as required by Expo TaskManager.
+import '@/platform/backgroundSync';
 
 type LockState = 'checking' | 'locked' | 'unlocked';
 
