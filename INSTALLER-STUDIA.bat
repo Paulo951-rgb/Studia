@@ -14,7 +14,7 @@ if errorlevel 1 goto no_node
 where npm >nul 2>nul
 if errorlevel 1 goto no_npm
 
-for /f "tokens=1 delims=v." %%a in ('node -v') do set NODE_MAJOR=%%a
+for /f "tokens=1,2 delims=v." %%a in ('node -v') do (set NODE_MAJOR=%%a&set NODE_MINOR=%%b)
 
 echo Node.js : 
 node -v
@@ -23,7 +23,8 @@ call npm -v
 echo.
 
 if not defined NODE_MAJOR goto no_node
-if %NODE_MAJOR% LSS 20 goto node_old
+if %NODE_MAJOR% LSS 22 goto node_old
+if %NODE_MAJOR% EQU 22 if %NODE_MINOR% LSS 5 goto node_old
 
 if exist "node_modules" goto have_modules
 echo Aucun dossier node_modules : installation complete des dependances.
@@ -77,7 +78,7 @@ exit /b 1
 :node_old
 echo [ERREUR] Node.js est trop ancien (version detectee : major %NODE_MAJOR%).
 echo.
-echo Studia demande Node.js 20 ou plus recent. Installez la version LTS :
+echo Studia demande Node.js 22.5 ou plus recent (node:sqlite). Installez Node.js 24 LTS :
 echo https://nodejs.org/fr
 echo.
 pause
