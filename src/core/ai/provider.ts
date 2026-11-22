@@ -4,6 +4,7 @@ import type { ToolRunner } from '@/core/ai/toolRunner';
 
 export type ProviderInputItem =
   | { role: 'user' | 'assistant'; content: string }
+  | { type: 'function_call'; call_id: string; name: string; arguments: string }
   | { type: 'function_call_output'; call_id: string; output: string };
 
 export type ProviderRequest = {
@@ -133,8 +134,10 @@ export async function runAgentTurn(options: AgentTurnOptions): Promise<AgentTurn
       return { text, toolCalls: executed, responseId, errorCode: null, usage: totalUsage() };
     }
 
+    // With store:false, replay assistant function_call items alongside their outputs.
+    input.push(...pendingCalls.map((call) => ({ type: 'function_call' as const, call_id: call.callId, name: call.name, arguments: call.arguments })));
+    const knownNames = new Set(tools.map((tool) => tool.name));
     for (const call of pendingCalls) {
-      const knownNames = new Set(tools.map((tool) => tool.name));
       onToolStart?.({ name: call.name, arguments: call.arguments });
 
       if (!knownNames.has(call.name as ToolName)) {
