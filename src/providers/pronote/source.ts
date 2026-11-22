@@ -59,21 +59,35 @@ import { makeId } from '@/core/util/ids';
 export const PRONOTE_USER_AGENT =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 PRONOTE Mobile APP Version/2.0.11';
 
+export const PRONOTE_REQUEST_TIMEOUT_MS = 25_000;
+
 export const pronoteFetcher: Fetcher = async (options) => {
-  const response = await fetch(options.url, {
-    method: options.method,
-    headers: { ...options.headers, 'User-Agent': PRONOTE_USER_AGENT },
-    body: options.method !== 'GET' ? options.content : undefined,
-    redirect: options.redirect,
-  });
-  const content = await response.text();
-  return {
-    content,
-    status: response.status,
-    get headers() {
-      return response.headers;
-    },
-  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PRONOTE_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(options.url, {
+      method: options.method,
+      headers: { ...options.headers, 'User-Agent': PRONOTE_USER_AGENT },
+      body: options.method !== 'GET' ? options.content : undefined,
+      redirect: options.redirect,
+      signal: controller.signal,
+    });
+    const content = await response.text();
+    return {
+      content,
+      status: response.status,
+      get headers() {
+        return response.headers;
+      },
+    };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`Délai dépassé : PRONOTE n'a pas répondu en ${PRONOTE_REQUEST_TIMEOUT_MS / 1000} secondes.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 export const PRONOTE_ACCOUNT_KINDS = { student: 6, parent: 7, teacher: 8 } as const;
