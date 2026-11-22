@@ -14,7 +14,11 @@ const UNTRUSTED_CLOSE = '<<<FIN_DONNEES_SCOLAIRES>>>';
 
 /** Wraps PRONOTE-provided text so the model can never confuse it with instructions. */
 export function fenceUntrusted(text: string): string {
-  return `${UNTRUSTED_OPEN}\n${text}\n${UNTRUSTED_CLOSE}`;
+  // Neutralise forged delimiters before wrapping PRONOTE-controlled content.
+  const safe = text
+    .split(UNTRUSTED_OPEN).join('[marqueur de début neutralisé]')
+    .split(UNTRUSTED_CLOSE).join('[marqueur de fin neutralisé]');
+  return `${UNTRUSTED_OPEN}\\n${safe}\\n${UNTRUSTED_CLOSE}`;
 }
 
 export function normalizeLabel(value: string): string {
