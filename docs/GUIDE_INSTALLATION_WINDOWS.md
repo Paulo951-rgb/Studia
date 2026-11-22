@@ -14,12 +14,10 @@ Studia est une application mobile. Elle ne peut pas s'exécuter dans un navigate
 elle a besoin d'une base de données chiffrée (SQLCipher) qui n'existe que sur un
 téléphone. Vous allez donc :
 
-1. installer les outils sur votre PC (Node.js, Git) ;
-2. télécharger le projet ;
-3. laisser un service en ligne gratuit (Expo EAS) fabriquer un fichier `.apk` ;
-4. installer ce fichier sur votre téléphone Android ;
-5. (facultatif) recharger l'application à chaud depuis votre PC pendant que vous
-   développez.
+1. télécharger le projet ;
+2. double-cliquer sur `DEMARRER-STUDIA-PC.bat` pour ouvrir immédiatement la démo locale ;
+3. (facultatif) installer Node.js et les dépendances pour lancer les tests automatisés ;
+4. pour tester la vraie application, fabriquer un APK et l'installer sur un appareil Android.
 
 Vous n'avez **pas** besoin d'Android Studio pour cette méthode.
 
@@ -88,7 +86,7 @@ npm -v
 ```
 
 Résultat attendu : deux numéros de version, par exemple `v22.20.0` et `10.9.3`.
-Studia exige Node.js **20 ou plus récent**.
+Studia exige Node.js **22.5 ou plus récent** pour `node:sqlite` ; Node.js 24 LTS est recommandé.
 
 Si vous voyez `node : Le terme « node » n'est pas reconnu`, voir le dépannage §G.1.
 
@@ -142,7 +140,7 @@ C:\Users\VotreNom\Documents\Studia
 4. Vérifiez que `package.json`, `app.json` et `INSTALLER-STUDIA.bat` sont **directement**
    dans ce dossier. S'ils sont dans un sous-dossier `Studia-main`, déplacez le contenu.
 
-> Le dépôt est privé : connectez-vous à GitHub avec votre compte avant de télécharger.
+Le dépôt est public : aucun accès privé n'est nécessaire.
 
 ### B.3 Méthode 2 — cloner avec Git
 
@@ -323,7 +321,15 @@ Pour un premier essai, utilisez **`preview`**.
 
 ## E. Tester sur PC
 
-Trois possibilités, de la plus simple à la plus lourde.
+### E.0 Aperçu PC sans installation (recommandé)
+
+1. Téléchargez le ZIP du dépôt et extrayez-le.
+2. Double-cliquez sur `DEMARRER-STUDIA-PC.bat`.
+3. Votre navigateur ouvre `pc-preview/index.html` : vous pouvez parcourir le tableau de bord, les notes, les devoirs, l'emploi du temps, les messages et l'assistant de démonstration.
+
+Cette démo est un prototype de présentation entièrement local. Les données sont inventées, les coches et réponses sont temporaires, et aucune requête réseau n'est effectuée. Elle ne teste donc ni la base SQLCipher, ni la connexion PRONOTE réelle, ni l'API OpenAI. Ces tests nécessitent toujours un build natif.
+
+### E.1 Téléphone Android en USB (sans Android Studio)
 
 ### E.1 Téléphone Android en USB (sans Android Studio)
 
@@ -363,7 +369,7 @@ l'application dans l'émulateur. Elle nécessite Java (JDK 17), fourni avec Andr
 > peut alors refuser de s'activer : c'est le comportement prévu, l'application reste
 > utilisable sans verrou.
 
-### E.3 Version web : impossible, et pourquoi
+### E.3 Version web native : non prise en charge, et pourquoi
 
 `npx expo start --web` ne fonctionnera pas. Deux raisons vérifiées :
 
