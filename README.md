@@ -14,8 +14,9 @@ centrale, aucune télémétrie.
 
 ## Vous débutez ? Commencez ici
 
-👉 **[Installer et tester sur Windows](docs/GUIDE_INSTALLATION_WINDOWS.md)** — guide pas à
-pas, de l'installation de Node.js jusqu'à l'APK sur votre téléphone.
+👉 **[Aperçu PC sans installation](DEMARRER-STUDIA-PC.bat)** — ouvrez une démo interactive locale dans votre navigateur, sans téléphone ni émulateur.
+
+👉 **[Installer et tester sur Windows](docs/GUIDE_INSTALLATION_WINDOWS.md)** — guide pas à pas pour les tests automatisés et la vraie application native.
 
 👉 **[Tester les fonctionnalités](docs/GUIDE_TESTS.md)** — 30 vérifications avec le
 résultat attendu pour chacune.
@@ -35,8 +36,13 @@ Puis, sur Windows, quatre scripts à double-cliquer :
 | `TESTER-STUDIA.bat` | Vérifie les types et lance les 113 tests. |
 | `CONSTRUIRE-APK.bat` | Fabrique un APK installable via Expo EAS (compte Expo gratuit requis). |
 | `LANCER-STUDIA.bat` | Démarre Metro pour recharger l'application à chaud (build `development`). |
+| `DEMARRER-STUDIA-PC.bat` | Ouvre la démo locale fictive dans le navigateur, sans installation. |
 
-## Pourquoi pas de version web
+## Aperçu PC et application native
+
+Le dépôt contient `pc-preview/index.html`, une démo de navigation locale avec données fictives, lancée par `DEMARRER-STUDIA-PC.bat`. Elle ne se connecte pas à PRONOTE ou OpenAI et ne remplace pas l'application native.
+
+## Pourquoi pas de version web native
 
 Studia repose sur SQLCipher, un chiffrement natif qui n'existe pas dans un navigateur.
 L'application refuse explicitement de démarrer sans chiffrement plutôt que d'écrire vos
@@ -108,6 +114,7 @@ Politique de confidentialité (brouillon à faire valider) :
 
 ## Documentation
 
+- [Aperçu PC sans installation](DEMARRER-STUDIA-PC.bat) — démo interactive locale.
 - [Lancer l'application sur votre PC](docs/LANCER_SUR_PC.md) — émulateur Android, de A à Z.
 - [Guide Windows](docs/GUIDE_INSTALLATION_WINDOWS.md) — installation de A à Z.
 - [Guide de tests](docs/GUIDE_TESTS.md) — automatiques et manuels.
