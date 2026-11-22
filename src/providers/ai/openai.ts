@@ -57,7 +57,9 @@ function buildRequestBody(request: ProviderRequest, stream: boolean): Record<str
     instructions: request.instructions,
     input: request.input.map((item) => {
       if ('type' in item) {
-        return { type: 'function_call_output', call_id: item.call_id, output: item.output };
+        return item.type === 'function_call'
+          ? { type: 'function_call', call_id: item.call_id, name: item.name, arguments: item.arguments }
+          : { type: 'function_call_output', call_id: item.call_id, output: item.output };
       }
       return { role: item.role, content: item.content };
     }),
