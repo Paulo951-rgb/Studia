@@ -119,6 +119,28 @@ test('429 maps to rate limiting', async () => {
   assert.equal(error.retryable, true);
 });
 
+test('function_call and function_call_output input items are serialized without loss', async () => {
+  let payload: Record<string, unknown> | null = null;
+  const provider = createOpenAiProvider({
+    apiKey: 'sk-test',
+    fetchImpl: async (_url, init) => {
+      payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return streamResponse('event: response.completed\\ndata: {"type":"response.completed","response":{"id":"r"}}\\n\\n');
+    },
+  });
+  const input: ProviderRequest['input'] = [
+    { role: 'user', content: 'Quelle est ma moyenne ?' },
+    { type: 'function_call', call_id: 'call_1', name: 'get_averages', arguments: '{}' },
+    { type: 'function_call_output', call_id: 'call_1', output: '{"averages":[]}' },
+  ];
+  await collect(provider.stream({ ...request(), input }));
+  const sent = payload?.['input'] as Record<string, unknown>[];
+  assert.equal(sent[1]?.['type'], 'function_call');
+  assert.equal(sent[1]?.['name'], 'get_averages');
+  assert.equal(sent[2]?.['type'], 'function_call_output');
+  assert.equal(sent[2]?.['output'], '{"averages":[]}');
+});
+
 test('store:false and strict tools are always sent', async () => {
   let payload: Record<string, unknown> | null = null;
   const provider = createOpenAiProvider({
